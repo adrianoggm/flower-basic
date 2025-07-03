@@ -1,28 +1,47 @@
-# =============================================================================
 # utils.py
-# =============================================================================
-import numpy as np
-from sklearn.datasets import make_classification
-from sklearn.model_selection import train_test_split
 
-def load_data(n_clients=2, samples_per_client=500, features=20, classes=2):
+import json
+import numpy as np
+import torch
+from sklearn.model_selection import train_test_split
+from sklearn.datasets import fetch_openml
+
+def load_ecg5000_openml(test_size: float = 0.2, random_state: int = 42):
     """
-    Generate synthetic classification data and split among n_clients.
-    Returns dict: {client_id: (X_train, y_train, X_test, y_test)}
+    Download ECG5000 from OpenML, split into train/test and return
+    NumPy arrays X_train, X_test, y_train, y_test.
     """
-    data = {}
-    for cid in range(n_clients):
-        X, y = make_classification(
-            n_samples=samples_per_client,
-            n_features=features,
-            n_informative=int(features/2),
-            n_redundant=int(features/4),
-            n_classes=classes,
-            random_state=42 + cid,
-        )
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42
-        )
-        data[cid] = (X_train.astype(np.float32), y_train.astype(np.int64),
-                     X_test.astype(np.float32), y_test.astype(np.int64))
-    return data
+    # fetch OpenML "ECG5000" by name
+    ds = fetch_openml(name="ECG5000", version=1, as_frame=False)
+    X, y = ds["data"], ds["target"].astype(int)
+    # Binarize: class 1 → normal (0), else abnormal (1)
+    y = (y != 1).astype(int)
+    return train_test_split(
+        X.astype(np.float32), y.astype(np.int64),
+        test_size=test_size, random_state=random_state,
+        stratify=y
+    )
+
+def state_dict_to_numpy(state_dict: dict) -> dict:
+    """
+    Convert a PyTorch model.state_dict() into a JSON‐serializable
+    dict of lists (one list per tensor).
+    """
+    np_dict = {}
+    for k, v in state_dict.items():
+        # move to CPU, convert to numpy, then to native Python list
+        np_dict[k] = v.detach().cpu().numpy().tolist()
+    return np_dict
+
+def numpy_to_state_dict(np_dict: dict, device: torch.device = None) -> dict:
+    """
+    Convert back from JSON‐loaded dict of lists into a PyTorch
+    state_dict (mapping names → torch.Tensor).
+    """
+    state_dict = {}
+    for k, v in np_dict.items():
+        tensor = torch.tensor(v, dtype=torch.float32)
+        if device is not None:
+            tensor = tensor.to(device)
+        state_dict[k] = tensor
+    return state_dict

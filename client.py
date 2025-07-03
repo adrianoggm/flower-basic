@@ -1,68 +1,102 @@
-# =============================================================================
-# client.py
-# =============================================================================
-import flwr as fl
-import torch
-import torch.nn.functional as F
-from torch.utils.data import DataLoader, TensorDataset
-from model import Net, get_weights, set_weights
-from utils import load_data
+# client_broker.py
 
-# Flower client implementing NumPyClient
-class FlowerClient(fl.client.NumPyClient):
-    def __init__(self, cid, data, model):
-        self.cid = cid
-        self.model = model
-        X_train, y_train, X_test, y_test = data[cid]
-        self.train_loader = DataLoader(
-            TensorDataset(torch.from_numpy(X_train), torch.from_numpy(y_train)),
+import time
+import json
+import torch
+from model import ECGModel
+from utils import load_data  # your data loader
+import paho.mqtt.client as mqtt
+
+# -----------------------------------------------------------------------------
+# MQTT CONFIG
+# -----------------------------------------------------------------------------
+MQTT_BROKER = "test.mosquitto.org"
+MQTT_PORT   = 1883
+TOPIC_UPDATES     = "fl/updates"       # where we publish our local Δθ
+TOPIC_GLOBAL_MODEL = "fl/global_model" # where we receive the aggregated θ
+
+# -----------------------------------------------------------------------------
+# CLIENT
+# -----------------------------------------------------------------------------
+class FLClientMQTT:
+    def __init__(self):
+        # 1) Initialize model
+        self.model = ECGModel()
+        # 2) Load data into DataLoader(s)
+        X_train, X_test, y_train, y_test = load_data()
+        self.train_loader = torch.utils.data.DataLoader(
+            torch.utils.data.TensorDataset(
+                torch.from_numpy(X_train).float(),
+                torch.from_numpy(y_train).long(),
+            ),
             batch_size=32,
             shuffle=True,
         )
-        self.test_loader = DataLoader(
-            TensorDataset(torch.from_numpy(X_test), torch.from_numpy(y_test)),
-            batch_size=32,
-        )
 
-    def get_parameters(self):
-        return get_weights(self.model)
+        # 3) Setup MQTT client
+        self.mqtt = mqtt.Client()
+        self.mqtt.on_connect = self._on_connect
+        self.mqtt.on_message = self._on_message
+        self.mqtt.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
 
-    def fit(self, parameters, config):
-        # Set model parameters
-        set_weights(self.model, parameters)
-        # Train locally
+        # Start network loop in background thread
+        self.mqtt.loop_start()
+
+        # Flag to know when a new global model has arrived
+        self._got_global = False
+
+    def _on_connect(self, client, userdata, flags, rc):
+        print(f"[MQTT] Connected (rc={rc}), subscribing to {TOPIC_GLOBAL_MODEL}")
+        client.subscribe(TOPIC_GLOBAL_MODEL)
+
+    def _on_message(self, client, userdata, msg):
+        if msg.topic == TOPIC_GLOBAL_MODEL:
+            payload = json.loads(msg.payload.decode())
+            # payload is dict: key→list
+            state_dict = {
+                k: torch.tensor(v) for k, v in payload.items()
+            }
+            self.model.load_state_dict(state_dict, strict=True)
+            print("[MQTT] Received & loaded new global model")
+            self._got_global = True
+
+    def train_one_round(self):
+        """Run one local epoch, compute Δθ, publish it, then wait for next global."""
+        # 1) Train one epoch
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-3)
+        criterion = torch.nn.CrossEntropyLoss()
         self.model.train()
-        optimizer = torch.optim.SGD(self.model.parameters(), lr=0.01)
-        for epoch in range(1):  # Single epoch for demo
-            for X, y in self.train_loader:
-                optimizer.zero_grad()
-                logits = self.model(X)
-                loss = F.cross_entropy(logits, y)
-                loss.backward()
-                optimizer.step()
-        # Return updated weights and training size
-        return get_weights(self.model), len(self.train_loader.dataset), {}
+        for X, y in self.train_loader:
+            optimizer.zero_grad()
+            logits = self.model(X)
+            loss = criterion(logits, y)
+            loss.backward()
+            optimizer.step()
 
-    def evaluate(self, parameters, config):
-        # Set model parameters
-        set_weights(self.model, parameters)
-        # Evaluate locally
-        self.model.eval()
-        correct, total, loss = 0, 0, 0.0
-        with torch.no_grad():
-            for X, y in self.test_loader:
-                logits = self.model(X)
-                loss += F.cross_entropy(logits, y, reduction='sum').item()
-                preds = logits.argmax(axis=1)
-                correct += (preds == y).sum().item()
-                total += y.size(0)
-        # Return loss, sample count, and metrics
-        return loss, total, {"accuracy": correct / total}
+        # 2) Compute current θ to publish as 'delta'
+        state = self.model.state_dict()
+        payload = {k: v.cpu().numpy().tolist() for k, v in state.items()}
+        self.mqtt.publish(TOPIC_UPDATES, json.dumps(payload))
+        print("[MQTT] Published local Δθ to topic", TOPIC_UPDATES)
+
+        # 3) Wait until fog broker publishes a new global model
+        print("[CLIENT] Waiting for new global model...")
+        while not self._got_global:
+            time.sleep(1)
+        self._got_global = False
+
+    def run(self, rounds: int = 5, delay: float = 5.0):
+        """Main loop: train→publish→sync→repeat."""
+        for rnd in range(1, rounds + 1):
+            print(f"\n=== Round {rnd} ===")
+            self.train_one_round()
+            time.sleep(delay)
+
+        # Clean up
+        self.mqtt.loop_stop()
+        self.mqtt.disconnect()
+        print("Done training.")
 
 if __name__ == "__main__":
-    # Load data
-    data = load_data(n_clients=2)
-    # Create client model
-    model = Net(num_features=20, num_classes=2)
-    # Start Flower client
-    fl.client.start_numpy_client(server_address="127.0.0.1:8080", client=FlowerClient(cid=0, data=data, model=model))
+    client = FLClientMQTT()
+    client.run(rounds=3, delay=2.0)
