@@ -1,28 +1,25 @@
-# =============================================================================
 # utils.py
-# =============================================================================
-import numpy as np
-from sklearn.datasets import make_classification
+from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
+import numpy as np
 
-def load_data(n_clients=2, samples_per_client=500, features=20, classes=2):
+def load_ecg5000_openml(
+    test_size: float = 0.2,
+    random_state: int = 42
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
-    Generate synthetic classification data and split among n_clients.
-    Returns dict: {client_id: (X_train, y_train, X_test, y_test)}
+    Descarga ECG5000 desde OpenML y divide en train/test.
+    - X_* shape = (n_samples, 140)
+    - y_* shape = (n_samples,), valores 1 (normal) o !=1 (anomalía)
     """
-    data = {}
-    for cid in range(n_clients):
-        X, y = make_classification(
-            n_samples=samples_per_client,
-            n_features=features,
-            n_informative=int(features/2),
-            n_redundant=int(features/4),
-            n_classes=classes,
-            random_state=42 + cid,
-        )
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42
-        )
-        data[cid] = (X_train.astype(np.float32), y_train.astype(np.int64),
-                     X_test.astype(np.float32), y_test.astype(np.int64))
-    return data
+    data = fetch_openml(name="ECG5000", version=1, as_frame=False)
+    X = data.data.astype(np.float32)
+    # Algunos targets vienen como strings; convertimos a int:
+    y = data.target.astype(int)
+    # Normalizamos etiquetas: 1 → 0 (normal),  others → 1 (anomalía)
+    y = np.where(y == 1, 0, 1)
+    return train_test_split(
+        X, y, test_size=test_size,
+        random_state=random_state,
+        stratify=y
+    )
