@@ -82,43 +82,13 @@ def on_update(client, userdata, msg):
 # -----------------------------------------------------------------------------
 # THREAD: listen for partials and forward to Flower aggregator
 # -----------------------------------------------------------------------------
-def start_partial_forwarder():
-    """
-    In a real system you could call into your Flower server via gRPC here.
-    For demo, we simply log or re‐publish to GLOBAL_TOPIC.
-    """
-    def _on_partial(client, userdata, msg):
-        try:
-            data = json.loads(msg.payload.decode())
-            region = data["region"]
-            partial = data["partial_weights"]
-            print(f"[FORWARDER] Got partial from {region}, size={len(partial)} params")
-
-            # TODO: call Flower aggregator API (gRPC) with `partial`
-            # e.g. flower_aggregator.receive_partial(partial)
-
-            # As a placeholder, re‐publish as a “global” update:
-            client.publish(GLOBAL_TOPIC, json.dumps(partial))
-            print("[FORWARDER] Republished as GLOBAL_MODEL")
-
-        except Exception as e:
-            print("[FORWARDER ERROR]", e)
-
-    sub = mqtt.Client()
-    sub.on_connect = lambda c, u, f, rc: c.subscribe(PARTIAL_TOPIC)
-    sub.on_message = _on_partial
-    sub.connect(MQTT_BROKER, MQTT_PORT)
-    sub.loop_forever()
 
 
 # -----------------------------------------------------------------------------
 # MAIN
 # -----------------------------------------------------------------------------
 def main():
-    # 1) Start forwarder thread
-    threading.Thread(target=start_partial_forwarder, daemon=True).start()
-
-    # 2) Start primary broker to collect client updates
+    # Start primary broker to collect client updates
     mqttc = mqtt.Client()
     mqttc.on_connect = lambda c, u, f, rc: c.subscribe(UPDATE_TOPIC)
     mqttc.on_message = on_update
