@@ -3,3 +3,5 @@ torchvision
 numpy
 scikit-learn
 tslearn
+flwr
+paho-mqtt
