@@ -1,4 +1,28 @@
-# broker_fog.py
+#!/usr/bin/env python3
+"""
+Broker Fog - Nodo de Agregación Regional
+
+Este componente actúa como un nodo fog que agrega actualizaciones de múltiples
+clientes locales antes de enviarlas al servidor central. Implementa agregación
+jerárquica en la arquitectura de aprendizaje federado.
+
+Funcionalidades:
+- Recibe actualizaciones de modelo de clientes locales via MQTT
+- Agrega K actualizaciones por región usando promedio ponderado
+- Publica agregados parciales para que los fog clients los reenvíen al servidor central
+- Maneja múltiples regiones simultáneamente
+
+Flujo:
+1. Escucha en topic 'fl/updates' para recibir actualizaciones de clientes
+2. Acumula actualizaciones hasta tener K por región  
+3. Computa promedio ponderado de los K modelos
+4. Publica agregado parcial en topic 'fl/partial'
+5. Resetea buffer y espera próximas actualizaciones
+
+Configuración:
+- K=3: Número de clientes por región antes de agregar
+- Soporte para múltiples regiones concurrentes
+"""
 
 import json
 import threading
@@ -9,21 +33,22 @@ import paho.mqtt.client as mqtt
 import numpy as np
 
 # -----------------------------------------------------------------------------
-# MQTT TOPICS & CONFIG
+# CONFIGURACIÓN MQTT Y PARÁMETROS DE AGREGACIÓN
 # -----------------------------------------------------------------------------
-UPDATE_TOPIC   = "fl/updates"        # clients publish Δθ + metadata here
-PARTIAL_TOPIC  = "fl/partial"        # this broker publishes region‐partials here
-GLOBAL_TOPIC   = "fl/global_model"   # (if you want to re‐publish a full global)
+UPDATE_TOPIC   = "fl/updates"        # clientes publican actualizaciones aquí
+PARTIAL_TOPIC  = "fl/partial"        # este broker publica agregados parciales aquí
+GLOBAL_TOPIC   = "fl/global_model"   # (opcional) para re-publicar modelo global
 
-MQTT_BROKER    = "test.mosquitto.org"
+MQTT_BROKER    = "localhost"
 MQTT_PORT      = 1883
 
-# Number of per‐region client updates to wait for before computing a partial
+# Número de actualizaciones por región antes de computar agregado parcial
 K = 3
 
 # -----------------------------------------------------------------------------
-# Buffers keyed by region
+# BUFFERS DE AGREGACIÓN POR REGIÓN
 # -----------------------------------------------------------------------------
+# Cada región mantiene su propio buffer de actualizaciones
 buffers = defaultdict(list)
 
 
@@ -32,51 +57,80 @@ buffers = defaultdict(list)
 # -----------------------------------------------------------------------------
 def weighted_average(updates: list[dict], weights: list[float] = None) -> dict:
     """
-    Given a list of N updates (each is a dict of numpy‐serializable lists),
-    compute element‐wise average. If `weights` provided, do weighted sum.
+    Realiza un promedio ponderado de actualizaciones de modelo por región.
+    
+    Args:
+        updates: Lista de diccionarios con parámetros del modelo
+                Cada dict tiene formato {param_name: numpy_array_serializable}
+        weights: Pesos para el promedio (opcional). Si None, usa promedio uniforme.
+    
+    Returns:
+        Diccionario con parámetros promediados para agregar al servidor central
     """
     n = len(updates)
     if weights is None:
         weights = [1.0 / n] * n
     avg = {}
 
-    # For each parameter key...
+    # Para cada parámetro del modelo...
     for key in updates[0]:
-        stacked = np.stack([np.array(up[key]) for up in updates], axis=0)
-        # weighted sum along axis=0, then convert back to list
-        avg[key] = (stacked * np.array(weights)[:, None]).sum(axis=0).tolist()
+        # Stack all parameter tensors for this key
+        param_arrays = [np.array(up[key]) for up in updates]
+        stacked = np.stack(param_arrays, axis=0)  # Shape: (n_updates, *param_shape)
+        
+        # Compute weighted average along the first axis
+        weights_array = np.array(weights).reshape(-1, *([1] * (stacked.ndim - 1)))
+        avg[key] = (stacked * weights_array).sum(axis=0).tolist()
+        
     return avg
 
 
 # -----------------------------------------------------------------------------
-# MQTT CALLBACK: handle incoming client Δθ
+# MQTT CALLBACK: Manejo de actualizaciones de clientes locales
 # -----------------------------------------------------------------------------
 def on_update(client, userdata, msg):
+    """
+    Callback que procesa actualizaciones de modelos enviadas por clientes locales.
+    
+    Recibe actualizaciones vía MQTT del topic 'fl/updates', las almacena por región
+    y cuando acumula K actualizaciones computa un agregado parcial que envía al
+    servidor central vía topic 'fl/partial'.
+    """
     try:
         payload = json.loads(msg.payload.decode())
-        region = payload["metadata"]["region"]   # e.g. "us-west"
-        weights = payload["weights"]            # dict: param → list
+        
+        # Extraer información del mensaje del cliente
+        region = payload.get("region", "default_region")
+        weights = payload.get("weights", {})
+        client_id = payload.get("client_id", "unknown")
+        num_samples = payload.get("num_samples", 1)
 
+        if not weights:
+            print(f"[BROKER] Received empty weights from {client_id}")
+            return
+
+        # Almacenar actualización en buffer de la región
         buffers[region].append(weights)
-        print(f"[BROKER] Received update from region={region}. "
-              f"Buffer size={len(buffers[region])}/{K}")
+        print(f"[BROKER] Actualización recibida de cliente={client_id}, region={region}. "
+              f"Buffer: {len(buffers[region])}/{K}")
 
-        # Once enough updates in this region, compute & publish partial
+        # Cuando se acumulan K actualizaciones, computar agregado parcial
         if len(buffers[region]) >= K:
             partial = weighted_average(buffers[region])
             buffers[region].clear()
 
-            # Publish the region‐partial for next hop
+            # Publicar agregado parcial hacia el servidor central
             msg = {
                 "region": region,
                 "partial_weights": partial,
                 "timestamp": time.time(),
             }
             client.publish(PARTIAL_TOPIC, json.dumps(msg))
-            print(f"[BROKER] Published partial for region={region}")
+            print(f"[BROKER] Agregado parcial publicado para region={region}")
 
     except Exception as e:
-        print("[BROKER ERROR] on_update:", e)
+        print(f"[BROKER ERROR] Error procesando actualización: {e}")
+        print(f"[BROKER ERROR] Mensaje: {msg.payload.decode()[:200]}...")
 
 
 # -----------------------------------------------------------------------------
@@ -85,15 +139,26 @@ def on_update(client, userdata, msg):
 
 
 # -----------------------------------------------------------------------------
-# MAIN
+# FUNCIÓN PRINCIPAL: Inicialización del broker fog
 # -----------------------------------------------------------------------------
 def main():
-    # Start primary broker to collect client updates
-    mqttc = mqtt.Client()
-    mqttc.on_connect = lambda c, u, f, rc: c.subscribe(UPDATE_TOPIC)
+    """
+    Función principal que inicializa el broker fog MQTT.
+    
+    Este broker:
+    1. Se conecta al broker MQTT local (localhost:1883)
+    2. Se suscribe al topic 'fl/updates' para recibir actualizaciones de clientes
+    3. Acumula K actualizaciones por región en buffers
+    4. Computa agregados parciales y los publica en 'fl/partial'
+    5. Los agregados parciales son consumidos por el servidor central
+    """
+    # Configurar cliente MQTT con callback API v2
+    mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    mqttc.on_connect = lambda c, u, f, rc, p=None: c.subscribe(UPDATE_TOPIC)
     mqttc.on_message = on_update
     mqttc.connect(MQTT_BROKER, MQTT_PORT)
-    print(f"[BROKER] Listening for updates on {UPDATE_TOPIC}")
+    print(f"[BROKER] Broker fog iniciado. Escuchando actualizaciones en {UPDATE_TOPIC}")
+    print(f"[BROKER] Agregando K={K} actualizaciones por región antes de enviar al servidor central")
     mqttc.loop_forever()
 
 

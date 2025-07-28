@@ -24,13 +24,21 @@ def load_ecg5000_openml(test_size: float = 0.2, random_state: int = 42):
 
 def state_dict_to_numpy(state_dict: dict) -> dict:
     """
-    Convert a PyTorch model.state_dict() into a JSON‐serializable
-    dict of lists (one list per tensor).
+    Convert a PyTorch model.state_dict() or numpy arrays into a JSON‐serializable
+    dict of lists (one list per tensor/array).
     """
     np_dict = {}
     for k, v in state_dict.items():
-        # move to CPU, convert to numpy, then to native Python list
-        np_dict[k] = v.detach().cpu().numpy().tolist()
+        # Handle both PyTorch tensors and numpy arrays
+        if hasattr(v, 'detach'):
+            # PyTorch tensor
+            np_dict[k] = v.detach().cpu().numpy().tolist()
+        elif hasattr(v, 'tolist'):
+            # numpy array
+            np_dict[k] = v.tolist()
+        else:
+            # Already a list or other serializable type
+            np_dict[k] = v
     return np_dict
 
 def numpy_to_state_dict(np_dict: dict, device: torch.device = None) -> dict:
