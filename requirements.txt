@@ -5,3 +5,19 @@ scikit-learn
 tslearn
 flwr
 paho-mqtt
+
+# Visualization and reporting dependencies
+matplotlib
+pandas
+tabulate
+seaborn
+
+# Development and testing dependencies
+pytest
+pytest-asyncio
+pytest-mock
+pytest-cov
+black
+flake8
+isort
+mypy

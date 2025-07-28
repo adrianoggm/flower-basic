@@ -19,20 +19,23 @@ FLUJO:
 4. Actualiza modelo local y repite
 """
 
-import time
 import json
+import time
+
+import paho.mqtt.client as mqtt
 import torch
+
 from model import ECGModel
 from utils import load_ecg5000_openml
-import paho.mqtt.client as mqtt
 
 # -----------------------------------------------------------------------------
 # CONFIGURACIÓN MQTT
 # -----------------------------------------------------------------------------
 MQTT_BROKER = "localhost"
-MQTT_PORT   = 1883
-TOPIC_UPDATES     = "fl/updates"       # Topic para publicar actualizaciones locales
-TOPIC_GLOBAL_MODEL = "fl/global_model" # Topic para recibir modelos globales
+MQTT_PORT = 1883
+TOPIC_UPDATES = "fl/updates"  # Topic para publicar actualizaciones locales
+TOPIC_GLOBAL_MODEL = "fl/global_model"  # Topic para recibir modelos globales
+
 
 # -----------------------------------------------------------------------------
 # CLIENTE LOCAL MQTT
@@ -40,17 +43,18 @@ TOPIC_GLOBAL_MODEL = "fl/global_model" # Topic para recibir modelos globales
 class FLClientMQTT:
     """
     Cliente de aprendizaje federado que usa MQTT para comunicación.
-    
+
     Funciones principales:
     1. Entrenamiento local en datos ECG5000 particionados
     2. Publicación de actualizaciones al broker fog
     3. Recepción de modelos globales del servidor central
     4. Sincronización con la arquitectura fog computing
     """
+
     def __init__(self):
         # Inicializar modelo CNN para ECG
         self.model = ECGModel()
-        
+
         # Cargar y preparar datos locales ECG5000
         X_train, X_test, y_train, y_test = load_ecg5000_openml()
         self.train_loader = torch.utils.data.DataLoader(
@@ -77,27 +81,28 @@ class FLClientMQTT:
 
     def _on_connect(self, client, userdata, flags, rc, properties=None):
         """Callback MQTT al conectarse: suscribirse a modelos globales."""
-        print(f"[CLIENT] MQTT conectado (rc={rc}), suscribiéndose a {TOPIC_GLOBAL_MODEL}")
+        print(
+            f"[CLIENT] MQTT conectado (rc={rc}), suscribiéndose a {TOPIC_GLOBAL_MODEL}"
+        )
         client.subscribe(TOPIC_GLOBAL_MODEL)
 
     def _on_message(self, client, userdata, msg):
         """
         Callback MQTT para procesar modelos globales del servidor central.
-        
+
         Recibe el modelo global actualizado y lo carga en el modelo local
         para la próxima ronda de entrenamiento.
         """
         if msg.topic == TOPIC_GLOBAL_MODEL:
             try:
                 payload = json.loads(msg.payload.decode())
-                # payload contiene: {"round": X, "global_weights": {param_name: [values]}}
+                # payload contiene: {"round": X, "global_weights": {param_name:
+                # [values]}}
                 if "global_weights" in payload:
                     weights_dict = payload["global_weights"]
-                    state_dict = {
-                        k: torch.tensor(v) for k, v in weights_dict.items()
-                    }
+                    state_dict = {k: torch.tensor(v) for k, v in weights_dict.items()}
                     self.model.load_state_dict(state_dict, strict=True)
-                    round_num = payload.get('round', '?')
+                    round_num = payload.get("round", "?")
                     print(f"[CLIENT] Modelo global cargado de ronda {round_num}")
                     self._got_global = True
                 else:
@@ -108,10 +113,10 @@ class FLClientMQTT:
     def train_one_round(self):
         """
         Ejecuta una ronda de entrenamiento local y publica la actualización.
-        
+
         Pasos:
         1. Entrena el modelo local por 1 época en datos ECG5000
-        2. Serializa los pesos actualizados 
+        2. Serializa los pesos actualizados
         3. Publica la actualización al broker fog vía MQTT
         4. Espera el próximo modelo global del servidor central
         """
@@ -119,10 +124,10 @@ class FLClientMQTT:
         optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-3)
         criterion = torch.nn.BCEWithLogitsLoss()  # Para clasificación binaria ECG
         self.model.train()
-        
+
         total_loss = 0.0
         num_batches = 0
-        
+
         for X, y in self.train_loader:
             optimizer.zero_grad()
             # Añadir dimensión de canal para CNN: (batch, 1, sequence_length)
@@ -131,7 +136,7 @@ class FLClientMQTT:
             loss = criterion(logits, y.float())  # Convertir a float para BCE
             loss.backward()
             optimizer.step()
-            
+
             total_loss += loss.item()
             num_batches += 1
 
@@ -145,9 +150,9 @@ class FLClientMQTT:
             "region": "region_0",  # Región por defecto (puede parametrizarse)
             "weights": {k: v.cpu().numpy().tolist() for k, v in state.items()},
             "num_samples": len(self.train_loader.dataset),
-            "loss": avg_loss
+            "loss": avg_loss,
         }
-        
+
         self.mqtt.publish(TOPIC_UPDATES, json.dumps(payload))
         print(f"[CLIENT] Actualización local publicada en {TOPIC_UPDATES}")
 
@@ -161,7 +166,7 @@ class FLClientMQTT:
     def run(self, rounds: int = 5, delay: float = 5.0):
         """
         Bucle principal del cliente: entrenar→publicar→sincronizar→repetir.
-        
+
         Args:
             rounds: Número de rondas de entrenamiento federado
             delay: Delay entre rondas (segundos)
@@ -185,7 +190,7 @@ class FLClientMQTT:
 if __name__ == "__main__":
     """
     Punto de entrada principal para ejecutar un cliente local.
-    
+
     Configura y ejecuta un cliente que:
     - Entrena en datos ECG5000 locales
     - Participa en aprendizaje federado vía MQTT
@@ -193,6 +198,6 @@ if __name__ == "__main__":
     """
     print("=== CLIENTE LOCAL DE APRENDIZAJE FEDERADO ===")
     print("Iniciando cliente MQTT para fog computing...")
-    
+
     client = FLClientMQTT()
     client.run(rounds=3, delay=2.0)

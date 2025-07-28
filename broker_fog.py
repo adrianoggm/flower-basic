@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Broker Fog - Nodo de Agregación Regional
+"""Broker Fog - Nodo de Agregación Regional.
 
 Este componente actúa como un nodo fog que agrega actualizaciones de múltiples
 clientes locales antes de enviarlas al servidor central. Implementa agregación
@@ -14,7 +13,7 @@ Funcionalidades:
 
 Flujo:
 1. Escucha en topic 'fl/updates' para recibir actualizaciones de clientes
-2. Acumula actualizaciones hasta tener K por región  
+2. Acumula actualizaciones hasta tener K por región
 3. Computa promedio ponderado de los K modelos
 4. Publica agregado parcial en topic 'fl/partial'
 5. Resetea buffer y espera próximas actualizaciones
@@ -25,22 +24,23 @@ Configuración:
 """
 
 import json
-import threading
 import time
 from collections import defaultdict
+from typing import Any, Dict, List, Optional
 
-import paho.mqtt.client as mqtt
 import numpy as np
 
 # -----------------------------------------------------------------------------
+import paho.mqtt.client as mqtt
+
 # CONFIGURACIÓN MQTT Y PARÁMETROS DE AGREGACIÓN
 # -----------------------------------------------------------------------------
-UPDATE_TOPIC   = "fl/updates"        # clientes publican actualizaciones aquí
-PARTIAL_TOPIC  = "fl/partial"        # este broker publica agregados parciales aquí
-GLOBAL_TOPIC   = "fl/global_model"   # (opcional) para re-publicar modelo global
+UPDATE_TOPIC = "fl/updates"  # clientes publican actualizaciones aquí
+PARTIAL_TOPIC = "fl/partial"  # este broker publica agregados parciales aquí
+GLOBAL_TOPIC = "fl/global_model"  # (opcional) para re-publicar modelo global
 
-MQTT_BROKER    = "localhost"
-MQTT_PORT      = 1883
+MQTT_BROKER = "localhost"
+MQTT_PORT = 1883
 
 # Número de actualizaciones por región antes de computar agregado parcial
 K = 3
@@ -55,15 +55,16 @@ buffers = defaultdict(list)
 # -----------------------------------------------------------------------------
 # Utility: element‐wise weighted average of a list of dicts {param_name: list}
 # -----------------------------------------------------------------------------
-def weighted_average(updates: list[dict], weights: list[float] = None) -> dict:
-    """
-    Realiza un promedio ponderado de actualizaciones de modelo por región.
-    
+def weighted_average(
+    updates: List[Dict[str, Any]], weights: Optional[List[float]] = None
+) -> Dict[str, Any]:
+    """Realiza un promedio ponderado de actualizaciones de modelo por región.
+
     Args:
         updates: Lista de diccionarios con parámetros del modelo
                 Cada dict tiene formato {param_name: numpy_array_serializable}
         weights: Pesos para el promedio (opcional). Si None, usa promedio uniforme.
-    
+
     Returns:
         Diccionario con parámetros promediados para agregar al servidor central
     """
@@ -77,11 +78,11 @@ def weighted_average(updates: list[dict], weights: list[float] = None) -> dict:
         # Stack all parameter tensors for this key
         param_arrays = [np.array(up[key]) for up in updates]
         stacked = np.stack(param_arrays, axis=0)  # Shape: (n_updates, *param_shape)
-        
+
         # Compute weighted average along the first axis
         weights_array = np.array(weights).reshape(-1, *([1] * (stacked.ndim - 1)))
         avg[key] = (stacked * weights_array).sum(axis=0).tolist()
-        
+
     return avg
 
 
@@ -91,19 +92,18 @@ def weighted_average(updates: list[dict], weights: list[float] = None) -> dict:
 def on_update(client, userdata, msg):
     """
     Callback que procesa actualizaciones de modelos enviadas por clientes locales.
-    
+
     Recibe actualizaciones vía MQTT del topic 'fl/updates', las almacena por región
     y cuando acumula K actualizaciones computa un agregado parcial que envía al
     servidor central vía topic 'fl/partial'.
     """
     try:
         payload = json.loads(msg.payload.decode())
-        
+
         # Extraer información del mensaje del cliente
         region = payload.get("region", "default_region")
         weights = payload.get("weights", {})
         client_id = payload.get("client_id", "unknown")
-        num_samples = payload.get("num_samples", 1)
 
         if not weights:
             print(f"[BROKER] Received empty weights from {client_id}")
@@ -111,8 +111,10 @@ def on_update(client, userdata, msg):
 
         # Almacenar actualización en buffer de la región
         buffers[region].append(weights)
-        print(f"[BROKER] Actualización recibida de cliente={client_id}, region={region}. "
-              f"Buffer: {len(buffers[region])}/{K}")
+        print(
+            f"[BROKER] Actualización recibida de cliente={client_id}, region={region}. "
+            f"Buffer: {len(buffers[region])}/{K}"
+        )
 
         # Cuando se acumulan K actualizaciones, computar agregado parcial
         if len(buffers[region]) >= K:
@@ -144,7 +146,7 @@ def on_update(client, userdata, msg):
 def main():
     """
     Función principal que inicializa el broker fog MQTT.
-    
+
     Este broker:
     1. Se conecta al broker MQTT local (localhost:1883)
     2. Se suscribe al topic 'fl/updates' para recibir actualizaciones de clientes
@@ -158,7 +160,9 @@ def main():
     mqttc.on_message = on_update
     mqttc.connect(MQTT_BROKER, MQTT_PORT)
     print(f"[BROKER] Broker fog iniciado. Escuchando actualizaciones en {UPDATE_TOPIC}")
-    print(f"[BROKER] Agregando K={K} actualizaciones por región antes de enviar al servidor central")
+    print(
+        f"[BROKER] Agregando K={K} actualizaciones por región antes de enviar al servidor central"
+    )
     mqttc.loop_forever()
 
 
