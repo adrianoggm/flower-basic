@@ -263,7 +263,6 @@ class TestPerformanceCharacteristics:
 
     def test_aggregation_performance(self):
         """Test performance of aggregation operations."""
-        import time
 
         from broker_fog import weighted_average
 
@@ -307,7 +306,6 @@ class TestPerformanceCharacteristics:
 
     def test_serialization_performance(self):
         """Test JSON serialization performance."""
-        import time
 
         from model import ECGModel
 
@@ -332,4 +330,3 @@ class TestPerformanceCharacteristics:
         ), f"Serialization took too long: {serialization_time}s"
 
 
-# Add import at the top after other imports
