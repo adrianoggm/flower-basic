@@ -134,9 +134,13 @@ class FederatedSimulator:
                 learning_rate=learning_rate,
                 batch_size=batch_size,
             )
-            train_loader, _ = trainer.create_data_loaders(
+            loaders = trainer.create_data_loaders(
                 X_client, y_client, X_test, y_test
             )
+            if isinstance(loaders, (list, tuple)):
+                train_loader = loaders[0]
+            else:
+                train_loader = loaders
             client_trainers.append((trainer, train_loader))
             print(f"   Client {i+1}: {len(X_client)} samples")
 
@@ -147,9 +151,13 @@ class FederatedSimulator:
             learning_rate=learning_rate,
             batch_size=batch_size,
         )
-        _, test_loader = global_trainer.create_data_loaders(
+        loaders = global_trainer.create_data_loaders(
             X_train, y_train, X_test, y_test
         )
+        if isinstance(loaders, (list, tuple)) and len(loaders) > 1:
+            test_loader = loaders[1]
+        else:
+            test_loader = loaders
 
         # Training history
         round_metrics = []
@@ -399,32 +407,32 @@ class ModelComparator:
                 ["Metric", "Centralized", "Federated", "Difference"],
                 [
                     "Accuracy",
-                    f"{comparison['baseline']['accuracy']:.4f}",
-                    f"{comparison['federated']['accuracy']:.4f}",
-                    f"{comparison['differences']['accuracy_diff']:+.4f}",
+                    f"{comparison['baseline'].get('accuracy', 0.0):.4f}",
+                    f"{comparison['federated'].get('accuracy', 0.0):.4f}",
+                    f"{comparison.get('differences', {}).get('accuracy_diff', 0.0):+.4f}",
                 ],
                 [
                     "F1-Score",
-                    f"{comparison['baseline']['f1_score']:.4f}",
-                    f"{comparison['federated']['f1_score']:.4f}",
-                    f"{comparison['differences']['f1_diff']:+.4f}",
+                    f"{comparison['baseline'].get('f1_score', 0.0):.4f}",
+                    f"{comparison['federated'].get('f1_score', 0.0):.4f}",
+                    f"{comparison.get('differences', {}).get('f1_diff', 0.0):+.4f}",
                 ],
                 [
                     "Precision",
-                    f"{comparison['baseline']['precision']:.4f}",
-                    f"{comparison['federated']['precision']:.4f}",
+                    f"{comparison['baseline'].get('precision', 0.0):.4f}",
+                    f"{comparison['federated'].get('precision', 0.0):.4f}",
                     "-",
                 ],
                 [
                     "Recall",
-                    f"{comparison['baseline']['recall']:.4f}",
-                    f"{comparison['federated']['recall']:.4f}",
+                    f"{comparison['baseline'].get('recall', 0.0):.4f}",
+                    f"{comparison['federated'].get('recall', 0.0):.4f}",
                     "-",
                 ],
                 [
                     "AUC",
-                    f"{comparison['baseline']['auc']:.4f}",
-                    f"{comparison['federated']['auc']:.4f}",
+                    f"{comparison['baseline'].get('auc', 0.0):.4f}",
+                    f"{comparison['federated'].get('auc', 0.0):.4f}",
                     "-",
                 ],
             ]
@@ -436,43 +444,45 @@ class ModelComparator:
             f.write("Training Efficiency\n")
             f.write("-" * 25 + "\n")
             f.write(
-                f"Centralized Training Time: {comparison['baseline']['training_time']:.2f}s\n"
+                f"Centralized Training Time: {comparison['baseline'].get('training_time', 0.0):.2f}s\n"
             )
             f.write(
-                f"Federated Training Time: {comparison['federated']['training_time']:.2f}s\n"
+                f"Federated Training Time: {comparison['federated'].get('training_time', 0.0):.2f}s\n"
             )
             f.write(
-                f"Time Ratio (Fed/Central): {comparison['differences']['time_ratio']:.2f}x\n"
+                f"Time Ratio (Fed/Central): {comparison.get('differences', {}).get('time_ratio', 0.0):.2f}x\n"
             )
             f.write(
-                f"Time Overhead: {comparison['differences']['time_overhead_pct']:+.1f}%\n\n"
+                f"Time Overhead: {comparison.get('differences', {}).get('time_overhead_pct', 0.0):+.1f}%\n\n"
             )
 
             # Summary
             f.write("Summary\n")
             f.write("-" * 12 + "\n")
+            summary = comparison.get('summary', {})
             f.write(
-                f"Better Accuracy: {comparison['summary']['better_approach'].title()}\n"
+                f"Better Accuracy: {summary.get('better_approach', 'N/A').title()}\n"
             )
-            f.write(f"Accuracy Gap: {comparison['summary']['accuracy_gap']:.4f}\n")
             f.write(
-                f"More Efficient: {comparison['summary']['training_efficiency'].title()}\n"
+                f"Accuracy Gap: {summary.get('accuracy_gap', 0.0):.4f}\n"
+            )
+            f.write(
+                f"More Efficient: {summary.get('training_efficiency', 'N/A').title()}\n"
             )
 
             # Recommendations
             f.write("\nRecommendations\n")
             f.write("-" * 20 + "\n")
 
-            if (
-                comparison["differences"]["accuracy_diff"] > -0.02
-            ):  # Within 2% is acceptable
+            diff = comparison.get("differences", {})
+            if diff.get("accuracy_diff", 0.0) > -0.02:
                 f.write("GOOD: Federated learning maintains competitive accuracy\n")
             else:
                 f.write(
                     "WARNING: Significant accuracy degradation in federated approach\n"
                 )
 
-            if comparison["differences"]["time_ratio"] < 1.5:  # Less than 50% overhead
+            if diff.get("time_ratio", 0.0) < 1.5:  # Less than 50% overhead
                 f.write("GOOD: Federated learning has reasonable training overhead\n")
             else:
                 f.write("WARNING: High training overhead in federated approach\n")
@@ -495,18 +505,18 @@ class ModelComparator:
         # 1. Performance metrics comparison
         metrics = ["Accuracy", "F1-Score", "Precision", "Recall", "AUC"]
         baseline_vals = [
-            comparison["baseline"]["accuracy"],
-            comparison["baseline"]["f1_score"],
-            comparison["baseline"]["precision"],
-            comparison["baseline"]["recall"],
-            comparison["baseline"]["auc"],
+            comparison["baseline"].get("accuracy", 0.0),
+            comparison["baseline"].get("f1_score", 0.0),
+            comparison["baseline"].get("precision", 0.0),
+            comparison["baseline"].get("recall", 0.0),
+            comparison["baseline"].get("auc", 0.0),
         ]
         federated_vals = [
-            comparison["federated"]["accuracy"],
-            comparison["federated"]["f1_score"],
-            comparison["federated"]["precision"],
-            comparison["federated"]["recall"],
-            comparison["federated"]["auc"],
+            comparison["federated"].get("accuracy", 0.0),
+            comparison["federated"].get("f1_score", 0.0),
+            comparison["federated"].get("precision", 0.0),
+            comparison["federated"].get("recall", 0.0),
+            comparison["federated"].get("auc", 0.0),
         ]
 
         x = np.arange(len(metrics))
@@ -524,8 +534,8 @@ class ModelComparator:
 
         # 2. Training time comparison
         times = [
-            comparison["baseline"]["training_time"],
-            comparison["federated"]["training_time"],
+            comparison["baseline"].get("training_time", 0.0),
+            comparison["federated"].get("training_time", 0.0),
         ]
         approaches = ["Centralized", "Federated"]
         colors = ["skyblue", "lightcoral"]
@@ -574,7 +584,7 @@ class ModelComparator:
         ax3.grid(True, alpha=0.3)
 
         # 4. Accuracy difference visualization
-        diff_pct = comparison["differences"]["accuracy_diff_pct"]
+        diff_pct = comparison.get("differences", {}).get("accuracy_diff_pct", 0.0)
         color = "green" if diff_pct >= 0 else "red"
 
         ax4.bar(["Accuracy Difference"], [diff_pct], color=color, alpha=0.7)
