@@ -6,13 +6,17 @@ import numpy as np
 import pytest
 import torch
 
-from utils import load_ecg5000_openml, numpy_to_state_dict, state_dict_to_numpy
+from flower_basic.utils import (
+    load_ecg5000_openml,
+    numpy_to_state_dict,
+    state_dict_to_numpy,
+)
 
 
 class TestDataLoading:
     """Test cases for data loading functions."""
 
-    @patch("utils.fetch_openml")
+    @patch("flower_basic.utils.fetch_openml")
     def test_load_ecg5000_openml_success(self, mock_fetch):
         """Test successful ECG5000 data loading."""
         # Mock the fetch_openml response
@@ -40,7 +44,7 @@ class TestDataLoading:
         total_samples = len(X_train) + len(X_test)
         assert abs(len(X_test) / total_samples - 0.2) < 0.1  # Approximately 20%
 
-    @patch("utils.fetch_openml")
+    @patch("flower_basic.utils.fetch_openml")
     def test_load_ecg5000_different_test_sizes(self, mock_fetch):
         """Test data loading with different test sizes."""
         mock_data = MagicMock()
@@ -59,7 +63,7 @@ class TestDataLoading:
 
     def test_load_ecg5000_deterministic_split(self):
         """Test that the data split is deterministic with fixed random_state."""
-        with patch("utils.fetch_openml") as mock_fetch:
+        with patch("flower_basic.utils.fetch_openml") as mock_fetch:
             # Create deterministic data
             np.random.seed(123)  # Fixed seed for deterministic data
             fixed_data = np.random.rand(100, 140).astype(np.float32)
@@ -145,7 +149,7 @@ class TestStateDictConversion:
         # Should handle numpy arrays correctly
         serializable_dict = state_dict_to_numpy(numpy_state_dict)
 
-        for key, value in serializable_dict.items():
+        for _key, value in serializable_dict.items():
             assert isinstance(value, list)
 
     def test_mixed_input_types(self):
@@ -159,7 +163,7 @@ class TestStateDictConversion:
         result = state_dict_to_numpy(mixed_dict)
 
         # All should be converted to lists
-        for key, value in result.items():
+        for _key, value in result.items():
             assert isinstance(value, list)
 
     def test_device_handling(self):
@@ -196,7 +200,7 @@ class TestStateDictConversion:
         """Test handling of invalid inputs."""
         # Test non-dict input
         with pytest.raises((TypeError, AttributeError)):
-            state_dict_to_numpy("not a dict")
+            state_dict_to_numpy("not a dict")  # type: ignore
 
         # Test invalid numpy dict
         invalid_dict = {"param": "not_a_tensor_or_array"}

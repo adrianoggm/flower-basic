@@ -12,8 +12,7 @@ All functions include comprehensive type hints and documentation following PEP 2
 
 from __future__ import annotations
 
-import warnings
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import numpy as np
 import torch
@@ -21,14 +20,13 @@ from scipy import stats
 from sklearn.datasets import fetch_openml
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import StratifiedKFold, train_test_split
-from sklearn.preprocessing import StandardScaler
 
 
 def load_ecg5000_openml(
     test_size: float = 0.2,
     random_state: int = 42,
     stratified: bool = True,
-) -> Union[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray], List[np.ndarray]]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray] | list[np.ndarray]:
     """Download ECG5000 dataset from OpenML and split into train/test sets.
 
     This function downloads the ECG5000 dataset from OpenML, performs binary
@@ -87,8 +85,8 @@ def load_ecg5000_subject_based(
     test_size: float = 0.2,
     random_state: int = 42,
     num_subjects: int = 5,
-    stratified: bool = True
-) -> Union[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray], List[np.ndarray]]:
+    stratified: bool = True,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray] | list[np.ndarray]:
     """Load ECG5000 with simulated subject-based splitting to prevent data leakage.
 
     Since ECG5000 contains data from a single patient, we simulate multiple subjects
@@ -149,10 +147,8 @@ def load_ecg5000_subject_based(
 
 
 def load_ecg5000_cross_validation(
-    n_splits: int = 5,
-    random_state: int = 42,
-    num_subjects: int = 5
-) -> List[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
+    n_splits: int = 5, random_state: int = 42, num_subjects: int = 5
+) -> list[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
     """Load ECG5000 with cross-validation splits to ensure robust evaluation.
 
     Args:
@@ -163,15 +159,15 @@ def load_ecg5000_cross_validation(
     Returns:
         List of (X_train, X_test, y_train, y_test) tuples for each fold
     """
-    from sklearn.model_selection import StratifiedKFold
-
     # Load simulated subject data
     X_full, y_full = load_ecg5000_subject_based(
         test_size=0.5,  # This will be overridden by CV
         random_state=random_state,
         num_subjects=num_subjects,
-        stratified=True
-    )[:2]  # Only need X and y, ignore the split
+        stratified=True,
+    )[
+        :2
+    ]  # Only need X and y, ignore the split
 
     # Actually load the full dataset and simulate subjects
     ds = fetch_openml(name="ECG5000", version=1, as_frame=False)
@@ -212,12 +208,14 @@ def load_ecg5000_cross_validation(
         X_train, X_test = X_simulated[train_idx], X_simulated[test_idx]
         y_train, y_test = y_simulated[train_idx], y_simulated[test_idx]
 
-        cv_splits.append((
-            X_train.astype(np.float32),
-            X_test.astype(np.float32),
-            y_train.astype(np.int64),
-            y_test.astype(np.int64)
-        ))
+        cv_splits.append(
+            (
+                X_train.astype(np.float32),
+                X_test.astype(np.float32),
+                y_train.astype(np.int64),
+                y_test.astype(np.int64),
+            )
+        )
 
     return cv_splits
 
@@ -226,8 +224,11 @@ def load_ecg5000_with_validation(
     test_size: float = 0.2,
     val_size: float = 0.1,
     random_state: int = 42,
-    stratified: bool = True
-) -> Union[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray], List[np.ndarray]]:
+    stratified: bool = True,
+) -> (
+    tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+    | list[np.ndarray]
+):
     """Load ECG5000 with train/validation/test splits.
 
     Args:
@@ -249,17 +250,19 @@ def load_ecg5000_with_validation(
     stratify_param = y_temp if stratified else None
 
     X_train, X_val, y_train, y_val = train_test_split(
-        X_temp, y_temp,
+        X_temp,
+        y_temp,
         test_size=val_size_adjusted,
         random_state=random_state,
-        stratify=stratify_param
+        stratify=stratify_param,
     )
 
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 
-def detect_data_leakage(X_train: np.ndarray, X_test: np.ndarray,
-                        threshold: float = 0.95) -> Dict[str, Any]:
+def detect_data_leakage(
+    X_train: np.ndarray, X_test: np.ndarray, threshold: float = 0.95
+) -> dict[str, Any]:
     """Detect potential data leakage between train and test sets.
 
     Args:
@@ -270,7 +273,6 @@ def detect_data_leakage(X_train: np.ndarray, X_test: np.ndarray,
     Returns:
         Dictionary with leakage analysis results
     """
-    from sklearn.metrics.pairwise import cosine_similarity
     import numpy as np
 
     # Calculate pairwise similarities (this is expensive for large datasets)
@@ -292,10 +294,13 @@ def detect_data_leakage(X_train: np.ndarray, X_test: np.ndarray,
         "mean_similarity": np.mean(max_similarities),
         "similarity_threshold": threshold,
         "sample_size": sample_size,
-        "leakage_detected": np.sum(highly_similar) > 0
+        "leakage_detected": np.sum(highly_similar) > 0,
     }
 
-def state_dict_to_numpy(state_dict: Dict[str, Any]) -> Dict[str, Any]:
+    return leakage_stats
+
+
+def state_dict_to_numpy(state_dict: dict[str, Any]) -> dict[str, Any]:
     """Convert PyTorch state_dict to JSON-serializable dict.
 
     Converts PyTorch tensors and numpy arrays to lists for JSON serialization.
@@ -323,8 +328,8 @@ def state_dict_to_numpy(state_dict: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def numpy_to_state_dict(
-    np_dict: Dict[str, Any], device: Optional[torch.device] = None
-) -> Dict[str, torch.Tensor]:
+    np_dict: dict[str, Any], device: torch.device | None = None
+) -> dict[str, torch.Tensor]:
     """Convert JSON-loaded dict back to PyTorch state_dict.
 
     Converts lists back to PyTorch tensors for model loading.
@@ -346,53 +351,9 @@ def numpy_to_state_dict(
     return state_dict
 
 
-def detect_data_leakage(
-    X_train: np.ndarray,
-    X_test: np.ndarray,
-    threshold: float = 0.95
-) -> Dict[str, Any]:
-    """Detect potential data leakage between train and test sets.
-
-    Args:
-        X_train: Training features
-        X_test: Test features
-        threshold: Similarity threshold for leakage detection
-
-    Returns:
-        Dictionary with leakage detection results
-    """
-    from sklearn.metrics.pairwise import cosine_similarity
-
-    # Sample a subset for efficiency (check first 1000 samples)
-    n_samples = min(1000, min(len(X_train), len(X_test)))
-    X_train_sample = X_train[:n_samples]
-    X_test_sample = X_test[:n_samples]
-
-    # Calculate pairwise similarities
-    similarities = cosine_similarity(X_train_sample, X_test_sample)
-
-    # Find maximum similarity for each test sample
-    max_similarities = np.max(similarities, axis=0)
-
-    # Calculate statistics
-    mean_similarity = np.mean(max_similarities)
-    max_similarity = np.max(max_similarities)
-    leakage_ratio = np.sum(max_similarities > threshold) / len(max_similarities)
-
-    return {
-        "mean_similarity": mean_similarity,
-        "max_similarity": max_similarity,
-        "leakage_ratio": leakage_ratio,
-        "potential_leakage": leakage_ratio > 0.1,  # More than 10% potentially leaked
-        "threshold_used": threshold
-    }
-
-
 def statistical_significance_test(
-    results_a: List[float],
-    results_b: List[float],
-    alpha: float = 0.05
-) -> Dict[str, Any]:
+    results_a: list[float], results_b: list[float], alpha: float = 0.05
+) -> dict[str, Any]:
     """Perform statistical significance test between two sets of results.
 
     Args:
@@ -403,8 +364,6 @@ def statistical_significance_test(
     Returns:
         Dictionary with statistical test results
     """
-    from scipy import stats
-
     # Perform t-test
     t_stat, p_value = stats.ttest_ind(results_a, results_b)
 
@@ -425,7 +384,7 @@ def statistical_significance_test(
         "mean_a": mean_a,
         "mean_b": mean_b,
         "cohen_d": cohen_d,
-        "effect_size_interpretation": _interpret_effect_size(cohen_d)
+        "effect_size_interpretation": _interpret_effect_size(cohen_d),
     }
 
 
@@ -447,8 +406,8 @@ def cross_validate_models(
     y: np.ndarray,
     n_splits: int = 5,
     random_state: int = 42,
-    **model_kwargs
-) -> Dict[str, Any]:
+    **model_kwargs,
+) -> dict[str, Any]:
     """Cross-validate a model with multiple random seeds for robust evaluation.
 
     Args:
@@ -462,19 +421,13 @@ def cross_validate_models(
     Returns:
         Dictionary with cross-validation results
     """
-    from sklearn.model_selection import StratifiedKFold
     from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 
     skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
 
-    results = {
-        "accuracy": [],
-        "f1": [],
-        "precision": [],
-        "recall": []
-    }
+    results = {"accuracy": [], "f1": [], "precision": [], "recall": []}
 
-    for fold, (train_idx, test_idx) in enumerate(skf.split(X, y)):
+    for _fold, (train_idx, test_idx) in enumerate(skf.split(X, y)):
         X_train, X_test = X[train_idx], X[test_idx]
         y_train, y_test = y[train_idx], y[test_idx]
 
@@ -486,9 +439,9 @@ def cross_validate_models(
 
         # Calculate metrics
         results["accuracy"].append(accuracy_score(y_test, y_pred))
-        results["f1"].append(f1_score(y_test, y_pred, average='binary'))
-        results["precision"].append(precision_score(y_test, y_pred, average='binary'))
-        results["recall"].append(recall_score(y_test, y_pred, average='binary'))
+        results["f1"].append(f1_score(y_test, y_pred, average="binary"))
+        results["precision"].append(precision_score(y_test, y_pred, average="binary"))
+        results["recall"].append(recall_score(y_test, y_pred, average="binary"))
 
     # Calculate summary statistics
     summary = {}
@@ -499,11 +452,7 @@ def cross_validate_models(
             "std": np.std(values),
             "min": np.min(values),
             "max": np.max(values),
-            "values": values
+            "values": values,
         }
 
-    return {
-        "fold_results": results,
-        "summary": summary,
-        "n_splits": n_splits
-    }
+    return {"fold_results": results, "summary": summary, "n_splits": n_splits}

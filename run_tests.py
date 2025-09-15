@@ -5,13 +5,14 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import List, Union
 
 
-def run_command(command: str, description: str) -> bool:
+def run_command(command: Union[str, List[str]], description: str) -> bool:
     """Run a command and return success status."""
     print(f"\n🔄 {description}...")
     try:
-        result = subprocess.run(command, shell=True, check=True)
+        subprocess.run(command, shell=True, check=True)
         print(f"✅ {description} completed successfully")
         return True
     except subprocess.CalledProcessError as e:

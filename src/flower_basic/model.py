@@ -1,6 +1,6 @@
 """ECG CNN model for federated learning with fog computing."""
 
-from typing import List, Union, Sequence
+from typing import List, Sequence, Union
 
 import numpy as np
 import torch
@@ -87,7 +87,9 @@ def get_parameters(model: nn.Module) -> List[np.ndarray]:
     return [val.cpu().numpy() for _, val in model.state_dict().items()]
 
 
-def set_parameters(model: nn.Module, parameters: Sequence[Union[torch.Tensor, np.ndarray]]) -> None:
+def set_parameters(
+    model: nn.Module, parameters: Sequence[Union[torch.Tensor, np.ndarray]]
+) -> None:
     """Load parameters (list of tensors/arrays) into the model.
 
     This function is used in federated learning to update model parameters

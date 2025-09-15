@@ -3,12 +3,13 @@
 Demo completa con múltiples clientes simulando diferentes regiones
 """
 
-import os
 import subprocess
 import time
 
 
-def launch_component(script_name, component_name, delay=0):
+def launch_component(
+    script_name: str, component_name: str, delay: int = 0
+) -> subprocess.Popen:
     """Lanza un componente y espera el delay especificado"""
     if delay > 0:
         print(f"⏳ Esperando {delay}s antes de iniciar {component_name}...")

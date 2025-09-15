@@ -1,53 +1,155 @@
-# Makefile para Federated Fog Computing Demo
-# Automatiza tareas de desarrollo, testing y formatting
+# Makefile for Federated Learning with Fog Computing Demo
+#
+# This Makefile provides convenient commands for development, testing,
+# and deployment following modern Python development practices.
 
-PYTHON = .venv/Scripts/python.exe
+PYTHON = python
+VENV_PYTHON = .venv/Scripts/python.exe
 ifeq ($(OS),Windows_NT)
-    PYTHON = .venv/Scripts/python.exe
+    VENV_PYTHON = .venv/Scripts/python.exe
 else
-    PYTHON = .venv/bin/python
+    VENV_PYTHON = .venv/bin/python
 endif
 
-.PHONY: help install format lint test test-unit test-integration test-coverage clean setup
+.PHONY: help install install-dev test test-cov test-unit test-integration lint format type-check clean build docs serve-docs pre-commit install-pre-commit quality fix dev-setup dev-check
 
-help:  ## Mostrar esta ayuda
-	@echo "Comandos disponibles:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+# Default target
+help: ## Show this help message
+	@echo "Available commands:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-setup:  ## Configurar entorno de desarrollo
-	python -m venv .venv
-	$(PYTHON) -m pip install --upgrade pip
-	$(PYTHON) -m pip install -r requirements.txt
-	@echo "✅ Entorno configurado. Activa con: .venv\Scripts\activate (Windows) o source .venv/bin/activate (Unix)"
+# Installation
+install: ## Install package and dependencies
+	$(PYTHON) -m pip install -e .
 
-install:  ## Instalar dependencias
-	$(PYTHON) -m pip install -r requirements.txt
+install-dev: ## Install package with development dependencies
+	$(PYTHON) -m pip install -e ".[dev,test]"
 
-format:  ## Formatear código con Black e isort
-	$(PYTHON) -m isort .
-	$(PYTHON) -m black .
-	@echo "✅ Código formateado"
+install-pre-commit: ## Install pre-commit hooks
+	pre-commit install
 
-lint:  ## Ejecutar linting con flake8
-	$(PYTHON) -m flake8 .
-	@echo "✅ Linting completado"
+# Testing
+test: ## Run all tests
+	$(PYTHON) -m pytest
 
-type-check:  ## Verificar tipos con MyPy
-	$(PYTHON) -m mypy . || true
-	@echo "✅ Verificación de tipos completada"
+test-unit: ## Run unit tests only
+	$(PYTHON) -m pytest -m "not integration"
 
-test:  ## Ejecutar todos los tests
-	$(PYTHON) -m pytest tests/ -v
+test-integration: ## Run integration tests only
+	$(PYTHON) -m pytest -m integration
 
-test-unit:  ## Ejecutar solo tests unitarios
-	$(PYTHON) -m pytest tests/ -v -m "not integration and not slow"
+test-cov: ## Run tests with coverage report
+	$(PYTHON) -m pytest --cov=. --cov-report=html --cov-report=term-missing
 
-test-integration:  ## Ejecutar tests de integración
-	$(PYTHON) -m pytest tests/ -v -m integration
+test-verbose: ## Run tests with verbose output
+	$(PYTHON) -m pytest -v
 
-test-coverage:  ## Ejecutar tests con reporte de cobertura
-	$(PYTHON) -m pytest tests/ --cov=. --cov-report=term-missing --cov-report=html
-	@echo "📊 Reporte de cobertura en htmlcov/index.html"
+# Code Quality
+lint: ## Run all linters
+	ruff check .
+	flake8 .
+
+format: ## Format code with black and isort
+	black .
+	isort .
+
+type-check: ## Run mypy type checking
+	mypy .
+
+quality: lint type-check ## Run all code quality checks
+
+fix: ## Auto-fix code issues
+	ruff check . --fix
+	black .
+	isort .
+
+# Pre-commit
+pre-commit: ## Run pre-commit on all files
+	pre-commit run --all-files
+
+pre-commit-update: ## Update pre-commit hooks
+	pre-commit autoupdate
+
+# Cleaning
+clean: ## Clean up build artifacts and cache
+	rm -rf build/
+	rm -rf dist/
+	rm -rf *.egg-info/
+	rm -rf .coverage
+	rm -rf htmlcov/
+	rm -rf .pytest_cache/
+	rm -rf .mypy_cache/
+	rm -rf .ruff_cache/
+	rm -rf __pycache__/
+	rm -rf */__pycache__/
+	rm -rf */*/__pycache__/
+	find . -type f -name "*.pyc" -delete
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+
+clean-all: clean ## Clean everything including virtual environment
+	rm -rf .venv/
+	rm -rf venv/
+
+# Build
+build: clean ## Build package distribution
+	$(PYTHON) -m build
+
+# Development workflow
+dev-setup: install-dev install-pre-commit ## Set up development environment
+
+dev-check: format quality test ## Run full development check
+
+# Demo commands
+run-demo: ## Run complete federated learning demo
+	$(PYTHON) -c "from compare_models import ModelComparator; comp = ModelComparator(); comp.run_robust_comparison(n_cv_folds=2)"
+
+run-quick: ## Run quick comparison demo
+	$(PYTHON) quick_comparison.py
+
+# Documentation
+docs: ## Generate documentation (if sphinx is configured)
+	sphinx-build -b html docs/ docs/_build/html
+
+serve-docs: docs ## Serve documentation locally
+	cd docs/_build/html && $(PYTHON) -m http.server 8000
+
+# CI/CD simulation
+ci: dev-check build ## Simulate CI pipeline
+	@echo "✅ CI pipeline completed successfully!"
+
+# Utility
+deps-update: ## Update all dependencies
+	pip install --upgrade pip
+	pip install --upgrade -e ".[dev,test]"
+
+deps-list: ## List installed packages
+	pip list
+
+deps-outdated: ## Show outdated packages
+	pip list --outdated
+
+# Git helpers
+git-clean: ## Remove untracked files
+	git clean -fd
+
+git-status: ## Show git status with useful info
+	@echo "=== Git Status ==="
+	git status --short
+	@echo
+	@echo "=== Recent Commits ==="
+	git log --oneline -5
+
+# Environment info
+info: ## Show environment information
+	@echo "=== Python Environment ==="
+	$(PYTHON) --version
+	which $(PYTHON)
+	@echo
+	@echo "=== Package Info ==="
+	pip show flower-basic 2>/dev/null || echo "Package not installed"
+	@echo
+	@echo "=== System Info ==="
+	uname -a 2>/dev/null || echo "Not on Unix-like system"
 
 test-fast:  ## Ejecutar tests rápidos solamente
 	$(PYTHON) -m pytest tests/ -v -m "not slow"

@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import torch
 
-from model import ECGModel, get_parameters, set_parameters
+from flower_basic.model import ECGModel, get_parameters, set_parameters
 
 
 class TestECGModel:

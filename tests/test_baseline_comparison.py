@@ -10,9 +10,9 @@ import numpy as np
 import pytest
 import torch
 
-from baseline_model import BaselineTrainer
-from compare_models import FederatedSimulator, ModelComparator
-from model import ECGModel
+from flower_basic.baseline_model import BaselineTrainer
+from flower_basic.compare_models import FederatedSimulator, ModelComparator
+from flower_basic.model import ECGModel
 
 
 class TestBaselineTrainer:
@@ -46,8 +46,8 @@ class TestBaselineTrainer:
         )
 
         # Check loader properties
-        assert len(train_loader.dataset) == 20
-        assert len(test_loader.dataset) == 10
+        assert len(train_loader.dataset) == 20  # type: ignore
+        assert len(test_loader.dataset) == 10  # type: ignore
         assert train_loader.batch_size == 8
 
         # Check data shapes
@@ -198,7 +198,7 @@ class TestFederatedSimulator:
             for global_param, client_param in zip(global_params, client_params):
                 torch.testing.assert_close(global_param, client_param)
 
-    @patch("compare_models.BaselineTrainer")
+    @patch("flower_basic.compare_models.BaselineTrainer")
     def test_train_federated(self, mock_trainer_class):
         """Test federated training process."""
         # Mock trainer and its methods
@@ -212,6 +212,13 @@ class TestFederatedSimulator:
             "auc": 0.88,
             "loss": 0.3,
         }
+        # Mock create_data_loaders to return mock loaders
+        mock_train_loader = MagicMock()
+        mock_test_loader = MagicMock()
+        mock_trainer.create_data_loaders.return_value = (
+            mock_train_loader,
+            mock_test_loader,
+        )
         mock_trainer_class.return_value = mock_trainer
 
         # Create sample data
@@ -295,9 +302,9 @@ class TestModelComparator:
         assert comparison["differences"]["time_ratio"] == pytest.approx(100.0 / 120.0)
         assert comparison["summary"]["better_approach"] == "centralized"
 
-    @patch("compare_models.load_ecg5000_openml")
-    @patch("compare_models.BaselineTrainer")
-    @patch("compare_models.FederatedSimulator")
+    @patch("flower_basic.utils.load_ecg5000_openml")
+    @patch("flower_basic.compare_models.BaselineTrainer")
+    @patch("flower_basic.compare_models.FederatedSimulator")
     def test_run_comparison_integration(
         self, mock_fed_sim, mock_trainer_class, mock_load_data
     ):
@@ -323,6 +330,13 @@ class TestModelComparator:
             "training_time": 120.0,
             "epochs": 10,
         }
+        # Mock create_data_loaders to return mock loaders
+        mock_train_loader = MagicMock()
+        mock_test_loader = MagicMock()
+        mock_trainer.create_data_loaders.return_value = (
+            mock_train_loader,
+            mock_test_loader,
+        )
         mock_trainer_class.return_value = mock_trainer
 
         # Mock federated simulator
@@ -355,10 +369,35 @@ class TestModelComparator:
         """Test saving comparison results."""
         # Mock comparison data
         comparison = {
-            "baseline": {"accuracy": 0.85, "training_time": 120.0},
-            "federated": {"accuracy": 0.83, "training_time": 100.0},
-            "differences": {"accuracy_diff": -0.02, "time_ratio": 0.83},
-            "summary": {"better_approach": "centralized"},
+            "baseline": {
+                "accuracy": 0.85,
+                "f1": 0.80,
+                "precision": 0.82,
+                "recall": 0.78,
+                "auc": 0.88,
+                "training_time": 120.0,
+            },
+            "federated": {
+                "accuracy": 0.83,
+                "f1": 0.79,
+                "precision": 0.81,
+                "recall": 0.77,
+                "auc": 0.86,
+                "training_time": 100.0,
+            },
+            "differences": {
+                "accuracy_diff": -0.02,
+                "accuracy_diff_pct": -2.35,
+                "f1_diff": -0.01,
+                "f1_diff_pct": -1.25,
+                "time_ratio": 0.83,
+                "time_overhead_pct": -17.0,
+            },
+            "summary": {
+                "better_approach": "centralized",
+                "accuracy_gap": 0.02,
+                "training_efficiency": "federated",
+            },
         }
 
         baseline_results = {

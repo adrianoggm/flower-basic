@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Script to validate GitHub Actions workflows."""
 
-import json
-import os
 import sys
 from pathlib import Path
 from typing import Dict, List
@@ -16,12 +14,12 @@ def validate_workflow_file(workflow_path: Path) -> Dict[str, List[str]]:
     warnings = []
 
     try:
-        with open(workflow_path, "r", encoding="utf-8") as f:
+        with open(workflow_path, encoding="utf-8") as f:
             content = f.read()
         workflow = yaml.safe_load(content)
     except UnicodeDecodeError:
         try:
-            with open(workflow_path, "r", encoding="latin-1") as f:
+            with open(workflow_path, encoding="latin-1") as f:
                 content = f.read()
             workflow = yaml.safe_load(content)
         except Exception as e:
@@ -124,7 +122,7 @@ def validate_all_workflows() -> bool:
             print(f"✅ {workflow_file.name} is valid")
 
     print("\n" + "=" * 50)
-    print(f"📊 Validation Summary:")
+    print("📊 Validation Summary:")
     print(f"   • Files checked: {len(workflow_files)}")
     print(f"   • Total errors: {total_errors}")
     print(f"   • Total warnings: {total_warnings}")
@@ -145,7 +143,7 @@ def check_required_dependencies():
         print("❌ requirements.txt not found")
         return False
 
-    with open(requirements_file, "r") as f:
+    with open(requirements_file) as f:
         requirements = f.read().lower()
 
     required_packages = ["torch", "flwr", "paho-mqtt", "numpy", "scikit-learn"]

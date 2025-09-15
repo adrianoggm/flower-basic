@@ -258,7 +258,7 @@ class BaselineTrainer:
         if verbose:
             print("-" * 60)
             print(f"✅ Training completed in {training_time:.2f} seconds")
-            print(f"📈 Final Test Metrics:")
+            print("📈 Final Test Metrics:")
             for metric, value in final_metrics.items():
                 print(f"   {metric.capitalize()}: {value:.4f}")
 
@@ -375,9 +375,9 @@ def main():
     else:
         device = torch.device(args.device)
 
-    print(f"🔥 Baseline ECG Model Training")
+    print("🔥 Baseline ECG Model Training")
     print(f"📱 Device: {device}")
-    print(f"⚙️  Configuration:")
+    print("⚙️  Configuration:")
     print(f"   Epochs: {args.epochs}")
     print(f"   Batch Size: {args.batch_size}")
     print(f"   Learning Rate: {args.lr}")
@@ -390,7 +390,7 @@ def main():
         test_size=args.test_size, random_state=args.random_state
     )
 
-    print(f"📊 Dataset info:")
+    print("📊 Dataset info:")
     print(f"   Train samples: {len(X_train)}")
     print(f"   Test samples: {len(X_test)}")
     print(f"   Features: {X_train.shape[1]}")
@@ -419,7 +419,7 @@ def main():
     trainer.save_results(results, args.output_dir)
 
     print("\n🎉 Baseline training completed successfully!")
-    print(f"📊 Use these results to compare with federated learning performance.")
+    print("📊 Use these results to compare with federated learning performance.")
 
 
 if __name__ == "__main__":

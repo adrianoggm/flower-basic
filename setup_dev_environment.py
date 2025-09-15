@@ -5,9 +5,12 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import List, Union
 
 
-def run_command(command: str, description: str, check: bool = True) -> bool:
+def run_command(
+    command: Union[str, List[str]], description: str, check: bool = True
+) -> bool:
     """Ejecuta un comando y maneja errores."""
     print(f"\n🔄 {description}...")
     try:
@@ -32,7 +35,7 @@ def run_command(command: str, description: str, check: bool = True) -> bool:
         return False
 
 
-def check_python_version():
+def check_python_version() -> bool:
     """Verifica la versión de Python."""
     version = sys.version_info
     print(f"🐍 Python version: {version.major}.{version.minor}.{version.micro}")

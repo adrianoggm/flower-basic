@@ -9,7 +9,6 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import NoReturn
 
 from .compare_models import ModelComparator
 
@@ -141,7 +140,6 @@ def run_comparison(args: argparse.Namespace) -> None:
     print(f"📊 Results saved to: {args.output_dir}/robust_comparison_results.json")
 
     # Print key findings
-    cv_results = results["cross_validation"]
     stat_results = results["statistical_test"]
 
     print("\n📈 Key Results:")
@@ -164,9 +162,10 @@ def run_demo(args: argparse.Namespace) -> None:
         print("   Mode: Fast (reduced parameters)")
         # Run quick comparison
         import subprocess
-        result = subprocess.run([
-            sys.executable, "quick_comparison.py"
-        ], capture_output=True, text=True)
+
+        result = subprocess.run(
+            [sys.executable, "quick_comparison.py"], capture_output=True, text=True
+        )
 
         if result.returncode == 0:
             print("✅ Demo completed successfully!")
@@ -178,7 +177,7 @@ def run_demo(args: argparse.Namespace) -> None:
         print("   Mode: Standard")
         # Run standard comparison
         comparator = ModelComparator()
-        results = comparator.run_robust_comparison(n_cv_folds=2)
+        comparator.run_robust_comparison(n_cv_folds=2)
 
         print("✅ Demo completed successfully!")
         print("📊 Results saved to: comparison_results/robust_comparison_results.json")
@@ -187,6 +186,7 @@ def run_demo(args: argparse.Namespace) -> None:
 def show_info() -> None:
     """Show system information."""
     import platform
+
     import torch
 
     print("🖥️  System Information")
@@ -205,24 +205,28 @@ def show_info() -> None:
 
     try:
         import flwr
+
         print(f"Flower version: {flwr.__version__}")
     except ImportError:
         print("Flower: Not installed")
 
     try:
         import numpy as np
+
         print(f"NumPy version: {np.__version__}")
     except ImportError:
         print("NumPy: Not installed")
 
     try:
         import pandas as pd
+
         print(f"Pandas version: {pd.__version__}")
     except ImportError:
         print("Pandas: Not installed")
 
     try:
         import sklearn
+
         print(f"Scikit-learn version: {sklearn.__version__}")
     except ImportError:
         print("Scikit-learn: Not installed")

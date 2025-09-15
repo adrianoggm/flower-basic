@@ -1,12 +1,14 @@
 """Tests for the central server component."""
 
 import json
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import flwr as fl
 import numpy as np
 import pytest
-import torch
+
+from flower_basic.model import ECGModel
+from flower_basic.server import MQTTFedAvg
 
 
 class TestMQTTFedAvg:
@@ -14,14 +16,8 @@ class TestMQTTFedAvg:
 
     def setup_method(self):
         """Set up test fixtures."""
-        from model import ECGModel
-
         self.model = ECGModel()
         self.mock_mqtt_client = Mock()
-
-    def test_strategy_initialization(self):
-        """Test strategy initialization."""
-        from server import MQTTFedAvg
 
         strategy = MQTTFedAvg(
             model=self.model,
@@ -35,10 +31,10 @@ class TestMQTTFedAvg:
         assert hasattr(strategy, "param_names")
         assert len(strategy.param_names) > 0
 
-    @patch("server.state_dict_to_numpy")
+    @patch("flower_basic.server.state_dict_to_numpy")
     def test_aggregate_fit_success(self, mock_state_dict_to_numpy):
         """Test successful aggregation and MQTT publishing."""
-        from server import MQTTFedAvg
+        from flower_basic.server import MQTTFedAvg
 
         # Setup strategy
         strategy = MQTTFedAvg(
@@ -90,7 +86,7 @@ class TestMQTTFedAvg:
 
     def test_aggregate_fit_no_mqtt(self):
         """Test aggregation when MQTT client is None."""
-        from server import MQTTFedAvg
+        from flower_basic.server import MQTTFedAvg
 
         # Initialize strategy without MQTT client
         strategy = MQTTFedAvg(
@@ -106,7 +102,7 @@ class TestMQTTFedAvg:
         with patch.object(
             fl.server.strategy.FedAvg, "aggregate_fit", return_value=mock_params
         ):
-            with patch("server.state_dict_to_numpy", return_value={}):
+            with patch("flower_basic.server.state_dict_to_numpy", return_value={}):
                 mock_client_proxy = Mock()
                 mock_fit_res = Mock()
                 results = [(mock_client_proxy, mock_fit_res)]
@@ -120,7 +116,7 @@ class TestMQTTFedAvg:
 
     def test_aggregate_fit_parent_returns_none(self):
         """Test behavior when parent aggregation returns None."""
-        from server import MQTTFedAvg
+        from flower_basic.server import MQTTFedAvg
 
         strategy = MQTTFedAvg(
             model=self.model,
@@ -143,7 +139,7 @@ class TestMQTTFedAvg:
 
     def test_aggregate_fit_mqtt_exception(self):
         """Test handling of MQTT publishing exceptions."""
-        from server import MQTTFedAvg
+        from flower_basic.server import MQTTFedAvg
 
         strategy = MQTTFedAvg(
             model=self.model,
@@ -164,7 +160,7 @@ class TestMQTTFedAvg:
         with patch.object(
             fl.server.strategy.FedAvg, "aggregate_fit", return_value=mock_params
         ):
-            with patch("server.state_dict_to_numpy", return_value={}):
+            with patch("flower_basic.server.state_dict_to_numpy", return_value={}):
                 mock_client_proxy = Mock()
                 mock_fit_res = Mock()
                 results = [(mock_client_proxy, mock_fit_res)]
@@ -183,7 +179,7 @@ class TestMQTTFedAvg:
 
     def test_parameter_conversion_flow(self):
         """Test the parameter conversion flow in aggregate_fit."""
-        from server import MQTTFedAvg
+        from flower_basic.server import MQTTFedAvg
 
         strategy = MQTTFedAvg(
             model=self.model,
@@ -225,11 +221,11 @@ class TestMQTTFedAvg:
 class TestServerMain:
     """Test cases for the main server function."""
 
-    @patch("server.fl.server.start_server")
-    @patch("server.mqtt.Client")
+    @patch("flower_basic.server.fl.server.start_server")
+    @patch("flower_basic.server.mqtt.Client")
     def test_main_function_mqtt_success(self, mock_mqtt_class, mock_start_server):
         """Test main function with successful MQTT connection."""
-        from server import main
+        from flower_basic.server import main
 
         # Mock MQTT client
         mock_mqtt_client = Mock()
@@ -252,11 +248,11 @@ class TestServerMain:
         assert hasattr(call_args[1]["config"], "num_rounds")
         assert call_args[1]["config"].num_rounds == 3
 
-    @patch("server.fl.server.start_server")
-    @patch("server.mqtt.Client")
+    @patch("flower_basic.server.fl.server.start_server")
+    @patch("flower_basic.server.mqtt.Client")
     def test_main_function_mqtt_failure(self, mock_mqtt_class, mock_start_server):
         """Test main function with MQTT connection failure."""
-        from server import main
+        from flower_basic.server import main
 
         # Mock MQTT client with connection failure
         mock_mqtt_client = Mock()
@@ -277,12 +273,12 @@ class TestServerMain:
         strategy = call_args[1]["strategy"]
         assert strategy.mqtt is None
 
-    @patch("server.fl.server.start_server")
+    @patch("flower_basic.server.fl.server.start_server")
     def test_strategy_configuration(self, mock_start_server):
         """Test that the strategy is configured correctly."""
-        from server import main
+        from flower_basic.server import main
 
-        with patch("server.mqtt.Client") as mock_mqtt_class:
+        with patch("flower_basic.server.mqtt.Client") as mock_mqtt_class:
             mock_mqtt_client = Mock()
             mock_mqtt_class.return_value = mock_mqtt_client
 
@@ -293,7 +289,7 @@ class TestServerMain:
             strategy = call_args[1]["strategy"]
 
             # Check strategy type
-            from server import MQTTFedAvg
+            from flower_basic.server import MQTTFedAvg
 
             assert isinstance(strategy, MQTTFedAvg)
 
@@ -308,8 +304,8 @@ class TestServerIntegration:
 
     def test_mqtt_message_format(self):
         """Test that MQTT messages follow expected format."""
-        from model import ECGModel
-        from server import MQTTFedAvg
+        from flower_basic.model import ECGModel
+        from flower_basic.server import MQTTFedAvg
 
         model = ECGModel()
         mock_mqtt = Mock()
@@ -351,15 +347,15 @@ class TestServerIntegration:
             assert isinstance(message["global_weights"], dict)
 
             # Check that weights can be converted back
-            for param_name, param_values in message["global_weights"].items():
+            for _param_name, param_values in message["global_weights"].items():
                 assert isinstance(param_values, list)
                 # Should be convertible back to numpy
                 np.array(param_values)
 
     def test_error_handling_edge_cases(self):
         """Test handling of various edge cases and errors."""
-        from model import ECGModel
-        from server import MQTTFedAvg
+        from flower_basic.model import ECGModel
+        from flower_basic.server import MQTTFedAvg
 
         model = ECGModel()
         mock_mqtt = Mock()
@@ -369,7 +365,7 @@ class TestServerIntegration:
         )
 
         # Test with empty results
-        result = strategy.aggregate_fit(1, [], [])
+        strategy.aggregate_fit(1, [], [])
         # Should handle gracefully (depends on parent implementation)
 
         # Test with malformed results

@@ -149,7 +149,11 @@ class FLClientMQTT:
             "client_id": f"client_{id(self) % 1000}",  # ID simple del cliente
             "region": "region_0",  # Región por defecto (puede parametrizarse)
             "weights": {k: v.cpu().numpy().tolist() for k, v in state.items()},
-            "num_samples": len(self.train_loader.dataset) if hasattr(self.train_loader.dataset, '__len__') else len(self.train_loader),
+            "num_samples": (
+                len(self.train_loader.dataset)
+                if hasattr(self.train_loader.dataset, "__len__")
+                else len(self.train_loader)
+            ),
             "loss": avg_loss,
         }
 

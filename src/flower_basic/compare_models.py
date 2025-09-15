@@ -22,29 +22,20 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
-import sys
 import time
-import warnings
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import torch
-from scipy import stats
 from tabulate import tabulate
 
 from .baseline_model import BaselineTrainer
 from .model import ECGModel
 from .utils import (
-    cross_validate_models,
     detect_data_leakage,
     load_ecg5000_cross_validation,
-    load_ecg5000_openml,
     load_ecg5000_subject_based,
-    load_ecg5000_with_validation,
     statistical_significance_test,
 )
 
@@ -66,7 +57,7 @@ class FederatedSimulator:
     def __init__(
         self,
         num_clients: int = 3,
-        device: Optional[torch.device] = None,
+        device: torch.device | None = None,
     ) -> None:
         """Initialize the federated learning simulator.
 
@@ -84,7 +75,7 @@ class FederatedSimulator:
         self.num_clients = num_clients
         self.device = device or torch.device("cpu")
         self.global_model = ECGModel().to(self.device)
-        self.client_models: List[ECGModel] = [
+        self.client_models: list[ECGModel] = [
             ECGModel().to(self.device) for _ in range(num_clients)
         ]
 
@@ -92,8 +83,8 @@ class FederatedSimulator:
         self,
         X: np.ndarray,
         y: np.ndarray,
-        random_state: Optional[int] = None,
-    ) -> List[Tuple[np.ndarray, np.ndarray]]:
+        random_state: int | None = None,
+    ) -> list[tuple[np.ndarray, np.ndarray]]:
         """Split dataset among federated clients using random partitioning.
 
         This method distributes the dataset across clients in a way that simulates
@@ -133,7 +124,7 @@ class FederatedSimulator:
         base_size = len(X) // num_clients
         remainder = len(X) % num_clients
 
-        client_data: List[Tuple[np.ndarray, np.ndarray]] = []
+        client_data: list[tuple[np.ndarray, np.ndarray]] = []
         start_idx = 0
 
         for i in range(num_clients):
@@ -186,7 +177,7 @@ class FederatedSimulator:
         local_epochs: int = 5,
         batch_size: int = 32,
         learning_rate: float = 0.001,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Simulate federated training.
 
         Args:
@@ -243,8 +234,8 @@ class FederatedSimulator:
             print(f"Round {round_num + 1}/{rounds}")
 
             # Local training on each client
-            for client_id, (trainer, train_loader) in enumerate(client_trainers):
-                for epoch in range(local_epochs):
+            for _client_id, (trainer, train_loader) in enumerate(client_trainers):
+                for _epoch in range(local_epochs):
                     trainer.train_epoch(train_loader)
 
             # Federated averaging
@@ -292,7 +283,7 @@ class ModelComparator:
         learning_rate: float = 0.001,
         test_size: float = 0.2,
         random_state: int = 42,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run complete comparison between models.
 
         Args:
@@ -318,7 +309,9 @@ class ModelComparator:
             test_size=test_size, random_state=random_state, num_subjects=5
         )
 
-        print(f"Dataset: {len(X_train)} train, {len(X_test)} test samples (simulated subjects)")
+        print(
+            f"Dataset: {len(X_train)} train, {len(X_test)} test samples (simulated subjects)"
+        )
 
         # 1. Baseline (Centralized) Training
         print("\n1. Running Baseline (Centralized) Training...")
@@ -346,7 +339,7 @@ class ModelComparator:
         )
 
         # 2. Federated Training
-        print(f"\n2. Running Federated Training...")
+        print("\n2. Running Federated Training...")
         fed_simulator = FederatedSimulator(num_clients=num_clients, device=device)
 
         federated_results = fed_simulator.train_federated(
@@ -375,8 +368,8 @@ class ModelComparator:
         return comparison
 
     def generate_comparison_report(
-        self, baseline_results: Dict[str, Any], federated_results: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, baseline_results: dict[str, Any], federated_results: dict[str, Any]
+    ) -> dict[str, Any]:
         """Generate comprehensive comparison report.
 
         Args:
@@ -440,9 +433,9 @@ class ModelComparator:
 
     def save_comparison_results(
         self,
-        comparison: Dict[str, Any],
-        baseline_results: Dict[str, Any],
-        federated_results: Dict[str, Any],
+        comparison: dict[str, Any],
+        baseline_results: dict[str, Any],
+        federated_results: dict[str, Any],
     ) -> None:
         """Save comparison results and generate visualizations.
 
@@ -463,7 +456,7 @@ class ModelComparator:
 
         print(f"\nComparison results saved to {self.output_dir}/")
 
-    def generate_text_report(self, comparison: Dict[str, Any]) -> None:
+    def generate_text_report(self, comparison: dict[str, Any]) -> None:
         """Generate human-readable text report.
 
         Args:
@@ -563,9 +556,9 @@ class ModelComparator:
 
     def plot_comparison(
         self,
-        comparison: Dict[str, Any],
-        baseline_results: Dict[str, Any],
-        federated_results: Dict[str, Any],
+        comparison: dict[str, Any],
+        baseline_results: dict[str, Any],
+        federated_results: dict[str, Any],
     ) -> None:
         """Generate comparison plots.
 
@@ -694,8 +687,8 @@ class ModelComparator:
         test_size: float = 0.2,
         random_state: int = 42,
         n_cv_folds: int = 5,
-        n_random_seeds: int = 3
-    ) -> Dict[str, Any]:
+        n_random_seeds: int = 3,
+    ) -> dict[str, Any]:
         """Run robust comparison with cross-validation and statistical testing.
 
         Args:
@@ -715,14 +708,10 @@ class ModelComparator:
         print("*** Robust Model Performance Comparison with Statistical Validation ***")
         print("=" * 80)
 
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
         # Load data with subject simulation
         print("Loading ECG5000 dataset with subject-based simulation...")
         cv_splits = load_ecg5000_cross_validation(
-            n_splits=n_cv_folds,
-            random_state=random_state,
-            num_subjects=5
+            n_splits=n_cv_folds, random_state=random_state, num_subjects=5
         )
 
         # Store results for statistical analysis
@@ -746,18 +735,32 @@ class ModelComparator:
             centralized_results.append(fold_comparison["baseline"]["accuracy"])
             federated_results.append(fold_comparison["federated"]["accuracy"])
 
-            print(f"Fold {fold_idx + 1} - Centralized: {fold_comparison['baseline']['accuracy']:.4f}, "
-                  f"Federated: {fold_comparison['federated']['accuracy']:.4f}")
+            print(
+                f"Fold {fold_idx + 1} - Centralized: {fold_comparison['baseline']['accuracy']:.4f}, "
+                f"Federated: {fold_comparison['federated']['accuracy']:.4f}"
+            )
 
         # Statistical analysis
         print("\n--- Statistical Analysis ---")
-        stat_test = statistical_significance_test(centralized_results, federated_results)
+        stat_test = statistical_significance_test(
+            centralized_results, federated_results
+        )
 
-        print(f"Centralized accuracy: {stat_test['mean_a']:.4f} ± {np.std(centralized_results):.4f}")
-        print(f"Federated accuracy: {stat_test['mean_b']:.4f} ± {np.std(federated_results):.4f}")
-        print(f"T-statistic: {stat_test['t_statistic']:.4f}, p-value: {stat_test['p_value']:.4f}")
-        print(f"Effect size (Cohen's d): {stat_test['cohen_d']:.4f} ({stat_test['effect_size_interpretation']})")
-        print(f"Statistically significant: {'Yes' if stat_test['significant'] else 'No'}")
+        print(
+            f"Centralized accuracy: {stat_test['mean_a']:.4f} ± {np.std(centralized_results):.4f}"
+        )
+        print(
+            f"Federated accuracy: {stat_test['mean_b']:.4f} ± {np.std(federated_results):.4f}"
+        )
+        print(
+            f"T-statistic: {stat_test['t_statistic']:.4f}, p-value: {stat_test['p_value']:.4f}"
+        )
+        print(
+            f"Effect size (Cohen's d): {stat_test['cohen_d']:.4f} ({stat_test['effect_size_interpretation']})"
+        )
+        print(
+            f"Statistically significant: {'Yes' if stat_test['significant'] else 'No'}"
+        )
 
         # Data leakage detection
         print("\n--- Data Leakage Detection ---")
@@ -765,7 +768,9 @@ class ModelComparator:
         print(f"Mean similarity: {leakage_results['mean_similarity']:.4f}")
         print(f"Max similarity: {leakage_results['max_similarity']:.4f}")
         print(f"Potential leakage ratio: {leakage_results['leakage_ratio']:.4f}")
-        print(f"Data leakage detected: {'Yes' if leakage_results['potential_leakage'] else 'No'}")
+        print(
+            f"Data leakage detected: {'Yes' if leakage_results['potential_leakage'] else 'No'}"
+        )
 
         # Comprehensive results
         robust_results = {
@@ -776,13 +781,13 @@ class ModelComparator:
                 "centralized_mean": np.mean(centralized_results),
                 "federated_mean": np.mean(federated_results),
                 "centralized_std": np.std(centralized_results),
-                "federated_std": np.std(federated_results)
+                "federated_std": np.std(federated_results),
             },
             "statistical_test": stat_test,
             "data_leakage": leakage_results,
             "recommendations": self._generate_robust_recommendations(
                 stat_test, leakage_results
-            )
+            ),
         }
 
         # Save robust results
@@ -791,8 +796,8 @@ class ModelComparator:
         return robust_results
 
     def _generate_robust_recommendations(
-        self, stat_test: Dict[str, Any], leakage_results: Dict[str, Any]
-    ) -> List[str]:
+        self, stat_test: dict[str, Any], leakage_results: dict[str, Any]
+    ) -> list[str]:
         """Generate recommendations based on robust analysis."""
         recommendations = []
 
@@ -825,31 +830,42 @@ class ModelComparator:
 
         return recommendations
 
-    def _save_robust_results(self, robust_results: Dict[str, Any]) -> None:
+    def _save_robust_results(self, robust_results: dict[str, Any]) -> None:
         """Save robust comparison results."""
         import json
+
         robust_file = os.path.join(self.output_dir, "robust_comparison_results.json")
 
         # Create a simplified version for JSON serialization
         clean_results = {
             "cross_validation": {
                 "n_folds": robust_results["cross_validation"]["n_folds"],
-                "centralized_mean": float(robust_results["cross_validation"]["centralized_mean"]),
-                "federated_mean": float(robust_results["cross_validation"]["federated_mean"]),
-                "centralized_std": float(robust_results["cross_validation"]["centralized_std"]),
-                "federated_std": float(robust_results["cross_validation"]["federated_std"])
+                "centralized_mean": float(
+                    robust_results["cross_validation"]["centralized_mean"]
+                ),
+                "federated_mean": float(
+                    robust_results["cross_validation"]["federated_mean"]
+                ),
+                "centralized_std": float(
+                    robust_results["cross_validation"]["centralized_std"]
+                ),
+                "federated_std": float(
+                    robust_results["cross_validation"]["federated_std"]
+                ),
             },
             "statistical_test": {
                 "t_statistic": float(robust_results["statistical_test"]["t_statistic"]),
                 "p_value": float(robust_results["statistical_test"]["p_value"]),
                 "significant": bool(robust_results["statistical_test"]["significant"]),
-                "effect_size": float(robust_results["statistical_test"]["cohen_d"])
+                "effect_size": float(robust_results["statistical_test"]["cohen_d"]),
             },
             "data_leakage": {
-                "leakage_detected": bool(robust_results["data_leakage"]["potential_leakage"]),
-                "leakage_ratio": float(robust_results["data_leakage"]["leakage_ratio"])
+                "leakage_detected": bool(
+                    robust_results["data_leakage"]["potential_leakage"]
+                ),
+                "leakage_ratio": float(robust_results["data_leakage"]["leakage_ratio"]),
             },
-            "recommendations": robust_results["recommendations"]
+            "recommendations": robust_results["recommendations"],
         }
 
         with open(robust_file, "w") as f:
@@ -891,7 +907,7 @@ def main():
     # Run comparison
     comparator = ModelComparator(args.output_dir)
 
-    results = comparator.run_comparison(
+    comparator.run_comparison(
         epochs=args.epochs,
         num_clients=args.num_clients,
         fl_rounds=args.fl_rounds,

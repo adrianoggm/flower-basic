@@ -19,12 +19,12 @@ __version__ = "0.1.0"
 __author__ = "Adriano Garcia"
 __email__ = "adriano.garcia@example.com"
 
-from .compare_models import ModelComparator
 from .baseline_model import BaselineTrainer
+from .compare_models import ModelComparator
 from .model import ECGModel
 from .utils import (
-    load_ecg5000_subject_based,
     detect_data_leakage,
+    load_ecg5000_subject_based,
     statistical_significance_test,
 )
 

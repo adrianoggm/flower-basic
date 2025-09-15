@@ -3,13 +3,11 @@
 Script maestro para ejecutar toda la demo paso a paso
 """
 
-import os
 import subprocess
-import sys
 import time
 
 
-def run_component(script, name, wait_time=3):
+def run_component(script: str, name: str, wait_time: int = 3) -> subprocess.Popen:
     """Ejecuta un componente y espera"""
     print(f"\n🚀 Iniciando {name}...")
     cmd = f".venv\\Scripts\\python.exe {script}"
@@ -62,7 +60,7 @@ def main():
             time.sleep(5)
             # Verificar si algún proceso terminó
             active = 0
-            for name, proc in components:
+            for _name, proc in components:
                 if proc.poll() is None:
                     active += 1
 

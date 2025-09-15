@@ -1,13 +1,17 @@
 """Integration tests for the complete fog federated learning system."""
 
 import json
-import threading
+import sys
 import time
-from unittest.mock import Mock, patch
+from pathlib import Path
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
 import torch
+
+# Add src to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 
 class TestSystemIntegration:
@@ -62,12 +66,12 @@ class TestSystemIntegration:
         assert "global_weights" in parsed
 
         # Test that weights can be converted back to numpy
-        for param_name, param_values in parsed["global_weights"].items():
+        for _param_name, param_values in parsed["global_weights"].items():
             np.array(param_values)  # Should not raise exception
 
     def test_parameter_shape_consistency(self):
         """Test that parameter shapes remain consistent across components."""
-        from model import ECGModel
+        from flower_basic.model import ECGModel
 
         model = ECGModel()
         original_state = model.state_dict()
@@ -95,7 +99,7 @@ class TestSystemIntegration:
 
     def test_aggregation_mathematics(self):
         """Test that the aggregation mathematics work correctly."""
-        from broker_fog import weighted_average
+        from flower_basic.broker_fog import weighted_average
 
         # Create realistic model parameters
         num_clients = 3
@@ -108,7 +112,7 @@ class TestSystemIntegration:
 
         # Generate client updates
         client_updates = []
-        for i in range(num_clients):
+        for _i in range(num_clients):
             update = {}
             for param_name, shape in param_shapes.items():
                 # Generate random parameters
@@ -136,8 +140,8 @@ class TestSystemIntegration:
 
     def test_multiple_rounds_simulation(self):
         """Simulate multiple rounds of federated learning."""
-        from broker_fog import weighted_average
-        from model import ECGModel, get_parameters, set_parameters
+        from flower_basic.broker_fog import weighted_average
+        from flower_basic.model import ECGModel, get_parameters, set_parameters
 
         # Initialize models for multiple clients
         num_clients = 3
@@ -155,7 +159,7 @@ class TestSystemIntegration:
 
             # 2. Clients train locally (simulated by adding noise)
             client_updates = []
-            for i, client_model in enumerate(client_models):
+            for _i, client_model in enumerate(client_models):
                 # Simulate training by adding small random noise
                 params = get_parameters(client_model)
                 noisy_params = [
@@ -183,16 +187,11 @@ class TestSystemIntegration:
     def test_mqtt_topic_consistency(self):
         """Test that MQTT topics are used consistently across components."""
         # Expected topics from the system
-        expected_topics = {
-            "fl/updates",  # client.py -> broker_fog.py
-            "fl/partial",  # broker_fog.py -> fog_flower_client.py
-            "fl/global_model",  # server.py -> client.py
-        }
 
         # Verify topic constants in each file
-        from broker_fog import PARTIAL_TOPIC, UPDATE_TOPIC
-        from client import TOPIC_GLOBAL_MODEL, TOPIC_UPDATES
-        from fog_flower_client import PARTIAL_TOPIC as FOG_PARTIAL_TOPIC
+        from flower_basic.broker_fog import PARTIAL_TOPIC, UPDATE_TOPIC
+        from flower_basic.client import TOPIC_GLOBAL_MODEL, TOPIC_UPDATES
+        from flower_basic.fog_flower_client import PARTIAL_TOPIC as FOG_PARTIAL_TOPIC
 
         # Check consistency
         assert TOPIC_UPDATES == UPDATE_TOPIC == "fl/updates"
@@ -202,25 +201,25 @@ class TestSystemIntegration:
     def test_configuration_consistency(self):
         """Test that configuration is consistent across components."""
         # MQTT broker configuration
-        from broker_fog import MQTT_BROKER as BROKER_BROKER
-        from broker_fog import MQTT_PORT as BROKER_PORT
-        from client import MQTT_BROKER as CLIENT_BROKER
-        from client import MQTT_PORT as CLIENT_PORT
-        from fog_flower_client import MQTT_BROKER as FOG_BROKER
-        from fog_flower_client import MQTT_PORT as FOG_PORT
+        from flower_basic.broker_fog import MQTT_BROKER as BROKER_BROKER
+        from flower_basic.broker_fog import MQTT_PORT as BROKER_PORT
+        from flower_basic.client import MQTT_BROKER as CLIENT_BROKER
+        from flower_basic.client import MQTT_PORT as CLIENT_PORT
+        from flower_basic.fog_flower_client import MQTT_BROKER as FOG_BROKER
+        from flower_basic.fog_flower_client import MQTT_PORT as FOG_PORT
 
         # All should use the same broker
         assert CLIENT_BROKER == BROKER_BROKER == FOG_BROKER == "localhost"
         assert CLIENT_PORT == BROKER_PORT == FOG_PORT == 1883
 
         # Aggregation configuration
-        from broker_fog import K as BROKER_K
+        from flower_basic.broker_fog import K as BROKER_K
 
         assert BROKER_K == 3  # Expected value from documentation
 
     def test_error_propagation_and_recovery(self):
         """Test how errors propagate through the system and recovery mechanisms."""
-        from broker_fog import on_update
+        from flower_basic.broker_fog import on_update
 
         # Test with malformed client update
         mock_client = Mock()
@@ -265,11 +264,11 @@ class TestPerformanceCharacteristics:
         """Test performance of aggregation operations."""
         import time
 
-        from broker_fog import weighted_average
+        from flower_basic.broker_fog import weighted_average
 
         # Create large parameter sets
         large_updates = []
-        for i in range(10):  # 10 clients
+        for _i in range(10):  # 10 clients
             update = {
                 "large_param": np.random.randn(1000, 1000).tolist()  # Large parameter
             }
@@ -293,12 +292,12 @@ class TestPerformanceCharacteristics:
 
     def test_memory_usage_patterns(self):
         """Test memory usage during normal operations."""
-        from model import ECGModel, get_parameters, set_parameters
+        from flower_basic.model import ECGModel, get_parameters, set_parameters
 
         model = ECGModel()
 
         # Test repeated parameter operations
-        for i in range(100):
+        for _i in range(100):
             params = get_parameters(model)
             set_parameters(model, params)
 
@@ -309,7 +308,7 @@ class TestPerformanceCharacteristics:
         """Test JSON serialization performance."""
         import time
 
-        from model import ECGModel
+        from flower_basic.model import ECGModel
 
         model = ECGModel()
         state_dict = model.state_dict()
@@ -319,9 +318,9 @@ class TestPerformanceCharacteristics:
 
         # Test serialization performance
         start_time = time.time()
-        for i in range(10):
+        for _i in range(10):
             serialized = json.dumps(large_update)
-            deserialized = json.loads(serialized)
+            json.loads(serialized)
         end_time = time.time()
 
         serialization_time = end_time - start_time

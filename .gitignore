@@ -2,8 +2,6 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
 
 # Distribution / packaging
@@ -19,18 +17,21 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 *.whl
 
 # Virtual environments
+.env
+.venv
 env/
 venv/
-.venv/
 ENV/
 env.bak/
 venv.bak/
+.Python
 
 # Installer logs
 pip-log.txt
@@ -46,54 +47,90 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *.cover
-*.pycov
+*.py,cover
 .hypothesis/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Jupyter Notebook checkpoints
-.ipynb_checkpoints/
+# Jupyter Notebook
+.ipynb_checkpoints
 
-# IDEs and editors
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
 .vscode/
 .idea/
-*.sublime-project
-*.sublime-workspace
+*.swp
+*.swo
+*~
 
-# Logs and databases
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+comparison_results/
+quick_comparison_results/
+quick_baseline_test/
 *.log
-*.sqlite3
-*.db
-
-# Flower logs (optional)
-flower.log
-flower_server.log
-flower_client_*.log
-
-# Local environment variables
-.env
-.env.*
-venv.env
-*.env
-
-# MyPy cache
-.mypy_cache/
-
-# Pyre
-.pyre/
+logs/
 
 # Temporary files
 *.tmp
 *.temp
+.cache/
+.tmp/
+
+# Pre-commit
+.pre-commit-config.yaml.backup
+
+# Documentation
+docs/_build/
+docs/build/
+
+# Node.js (if any)
+node_modules/
+npm-debug.log*
+
+# Docker
+.dockerignore
+
+# Local development
+.env.local
+.env.development
+.env.test
+
+# Backup files
 *.bak
-*~ 
+*.backup
+*~
 
-# macOS
-.DS_Store
+# Flower specific
+flower.log
+flower_server.log
+flower_client_*.log
 
-# Windows
-Thumbs.db
-
-# -------------------------
-# Ignore raw and processed data
+# Raw and processed data
 data/
 data/**
 

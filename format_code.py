@@ -39,7 +39,7 @@ def run_command(command: str, description: str, check_mode: bool = False) -> boo
         return False
 
 
-def main():
+def main() -> None:
     """Run code quality tools."""
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Run code formatting and linting")

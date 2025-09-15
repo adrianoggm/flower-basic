@@ -4,14 +4,16 @@ Script de configuración automática del entorno para Federated Fog Demo
 Configura el entorno virtual, instala dependencias y verifica la configuración
 """
 
-import os
 import platform
 import subprocess
 import sys
 from pathlib import Path
+from typing import List, Union
 
 
-def run_command(command, description, check=True):
+def run_command(
+    command: Union[str, List[str]], description: str, check: bool = True
+) -> bool:
     """Ejecuta un comando y maneja errores"""
     print(f"\n🔄 {description}...")
     try:
@@ -208,8 +210,8 @@ def main():
         print("      - run_debug.bat (opcional)")
     else:
         python_exe = get_python_executable()
-        print(f"   1. Activar entorno: source .venv/bin/activate")
-        print(f"   2. Ejecutar componentes en orden:")
+        print("   1. Activar entorno: source .venv/bin/activate")
+        print("   2. Ejecutar componentes en orden:")
         print(f"      - {python_exe} server.py")
         print(f"      - {python_exe} broker_fog.py")
         print(f"      - {python_exe} fog_flower_client.py")

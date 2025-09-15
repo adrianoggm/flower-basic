@@ -12,7 +12,7 @@ import sys
 import time
 
 
-def run_quick_comparison():
+def run_quick_comparison() -> None:
     """Run quick comparison with reduced parameters."""
     print("*** Quick ECG Model Comparison Demo ***")
     print("=" * 50)
@@ -50,9 +50,9 @@ def run_quick_comparison():
         if result.returncode == 0:
             total_time = time.time() - start_time
             print(f"\nQuick comparison completed in {total_time:.1f} seconds!")
-            print(f"Results saved to: quick_comparison_results/")
-            print(f"Check comparison_plots.png for visualizations")
-            print(f"Check comparison_report.txt for detailed analysis")
+            print("Results saved to: quick_comparison_results/")
+            print("Check comparison_plots.png for visualizations")
+            print("Check comparison_report.txt for detailed analysis")
 
             # Try to show quick summary from stdout
             if "Better Accuracy:" in result.stdout:
@@ -64,7 +64,7 @@ def run_quick_comparison():
                     ):
                         print(f"   {line.strip()}")
         else:
-            print(f"Error running comparison:")
+            print("Error running comparison:")
             print(result.stderr)
 
     except Exception as e:

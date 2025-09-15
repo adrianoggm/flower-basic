@@ -1,13 +1,16 @@
 """Tests for MQTT components (client, broker_fog)."""
 
 import json
-import threading
+import sys
 import time
-from unittest.mock import MagicMock, Mock, call, patch
+from pathlib import Path
+from unittest.mock import Mock, patch
 
 import numpy as np
 import pytest
-import torch
+
+# Add src to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 
 class TestBrokerFog:
@@ -22,11 +25,11 @@ class TestBrokerFog:
             "conv1.bias": np.random.randn(16).tolist(),
         }
 
-    @patch("broker_fog.weighted_average")
-    @patch("broker_fog.buffers")
+    @patch("flower_basic.broker_fog.weighted_average")
+    @patch("flower_basic.broker_fog.buffers")
     def test_on_update_accumulation(self, mock_buffers, mock_weighted_avg):
         """Test that updates are correctly accumulated in buffers."""
-        from broker_fog import K, on_update
+        from flower_basic.broker_fog import on_update
 
         # Setup mock buffers to simulate a list
         test_buffer = []
@@ -57,11 +60,11 @@ class TestBrokerFog:
         # Buffer should have the new weights added
         assert len(test_buffer) == 2  # 1 existing + 1 new
 
-    @patch("broker_fog.weighted_average")
-    @patch("broker_fog.buffers")
+    @patch("flower_basic.broker_fog.weighted_average")
+    @patch("flower_basic.broker_fog.buffers")
     def test_on_update_triggers_aggregation(self, mock_buffers, mock_weighted_avg):
         """Test that aggregation is triggered when buffer is full."""
-        from broker_fog import K, on_update
+        from flower_basic.broker_fog import K, on_update
 
         # Setup mocks
         buffer_list = Mock()
@@ -92,7 +95,7 @@ class TestBrokerFog:
 
     def test_weighted_average_computation(self):
         """Test the weighted average computation."""
-        from broker_fog import weighted_average
+        from flower_basic.broker_fog import weighted_average
 
         # Create test updates
         updates = [
@@ -113,7 +116,7 @@ class TestBrokerFog:
 
     def test_weighted_average_with_custom_weights(self):
         """Test weighted average with custom weights."""
-        from broker_fog import weighted_average
+        from flower_basic.broker_fog import weighted_average
 
         updates = [{"param1": [1.0, 2.0]}, {"param1": [3.0, 4.0]}]
         weights = [0.7, 0.3]
@@ -126,7 +129,7 @@ class TestBrokerFog:
 
     def test_malformed_message_handling(self):
         """Test handling of malformed MQTT messages."""
-        from broker_fog import on_update
+        from flower_basic.broker_fog import on_update
 
         # Test with invalid JSON
         mock_msg = Mock()
@@ -140,7 +143,7 @@ class TestBrokerFog:
 
     def test_missing_fields_handling(self):
         """Test handling of messages with missing required fields."""
-        from broker_fog import on_update
+        from flower_basic.broker_fog import on_update
 
         # Test with missing weights
         test_payload = {
@@ -182,8 +185,8 @@ class TestClientMQTT:
             "fc2.bias": np.random.randn(1).tolist(),
         }
 
-    @patch("client.mqtt.Client")
-    @patch("client.load_ecg5000_openml")
+    @patch("flower_basic.client.mqtt.Client")
+    @patch("flower_basic.client.load_ecg5000_openml")
     def test_client_initialization(self, mock_load_data, mock_mqtt_class):
         """Test client initialization."""
         # Mock data loading
@@ -196,7 +199,7 @@ class TestClientMQTT:
 
         mock_mqtt_class.return_value = self.mock_mqtt_client
 
-        from client import FLClientMQTT
+        from flower_basic.client import FLClientMQTT
 
         client = FLClientMQTT()
 
@@ -209,8 +212,8 @@ class TestClientMQTT:
         assert hasattr(client, "model")
         assert hasattr(client, "train_loader")
 
-    @patch("client.mqtt.Client")
-    @patch("client.load_ecg5000_openml")
+    @patch("flower_basic.client.mqtt.Client")
+    @patch("flower_basic.client.load_ecg5000_openml")
     def test_global_model_reception(self, mock_load_data, mock_mqtt_class):
         """Test reception and processing of global model updates."""
         # Setup mocks
@@ -222,7 +225,7 @@ class TestClientMQTT:
         )
         mock_mqtt_class.return_value = self.mock_mqtt_client
 
-        from client import FLClientMQTT
+        from flower_basic.client import FLClientMQTT
 
         client = FLClientMQTT()
 
@@ -237,10 +240,10 @@ class TestClientMQTT:
         client._on_message(None, None, mock_msg)
 
         # Should set the flag
-        assert client._got_global == True
+        assert client._got_global
 
-    @patch("client.mqtt.Client")
-    @patch("client.load_ecg5000_openml")
+    @patch("flower_basic.client.mqtt.Client")
+    @patch("flower_basic.client.load_ecg5000_openml")
     def test_training_and_publishing(self, mock_load_data, mock_mqtt_class):
         """Test local training and weight publishing."""
         # Setup mocks
@@ -252,7 +255,7 @@ class TestClientMQTT:
         )
         mock_mqtt_class.return_value = self.mock_mqtt_client
 
-        from client import FLClientMQTT
+        from flower_basic.client import FLClientMQTT
 
         client = FLClientMQTT()
 
@@ -282,10 +285,10 @@ class TestClientMQTT:
 
     def test_invalid_global_model_message(self):
         """Test handling of invalid global model messages."""
-        from client import FLClientMQTT
+        from flower_basic.client import FLClientMQTT
 
-        with patch("client.mqtt.Client"), patch(
-            "client.load_ecg5000_openml"
+        with patch("flower_basic.client.mqtt.Client"), patch(
+            "flower_basic.client.load_ecg5000_openml"
         ) as mock_load:
             mock_load.return_value = (
                 np.random.randn(100, 140),
@@ -308,7 +311,7 @@ class TestClientMQTT:
                 pytest.fail(f"Should handle invalid JSON gracefully, but raised: {e}")
 
             # Should not set the flag
-            assert client._got_global == False
+            assert not client._got_global
 
 
 class TestMQTTIntegration:
