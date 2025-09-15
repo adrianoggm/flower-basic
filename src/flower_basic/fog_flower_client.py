@@ -56,7 +56,7 @@ class FogClient(fl.client.NumPyClient):
         self.partial_weights = None
 
         # Configurar suscriptor MQTT para recibir agregados parciales
-        self.mqtt = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
+        self.mqtt = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         self.mqtt.on_connect = self._on_connect
         self.mqtt.on_message = self._on_partial
         self.mqtt.connect(MQTT_BROKER, MQTT_PORT)
@@ -80,7 +80,7 @@ class FogClient(fl.client.NumPyClient):
         except Exception as e:
             print(f"[FOG_CLIENT] Error procesando agregado parcial: {e}")
 
-    def _on_connect(self, client, userdata, flags, rc):
+    def _on_connect(self, client, userdata, flags, rc, properties=None):
         """Callback MQTT para conexión exitosa."""
         if rc == 0:
             client.subscribe(PARTIAL_TOPIC)

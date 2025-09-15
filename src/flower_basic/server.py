@@ -172,7 +172,7 @@ def main():
     model = ECGModel()
 
     # Configurar cliente MQTT
-    mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
+    mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     try:
         mqtt_client.connect(MQTT_BROKER)
         mqtt_client.loop_start()

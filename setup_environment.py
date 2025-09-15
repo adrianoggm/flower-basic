@@ -122,14 +122,14 @@ def test_mqtt_connection():
 import paho.mqtt.client as mqtt
 import time
 
-def on_connect(client, userdata, flags, rc):
+def on_connect(client, userdata, flags, rc, properties=None):
     if rc == 0:
         print("✅ Conexión MQTT exitosa")
         client.disconnect()
     else:
         print(f"❌ Error de conexión MQTT: {rc}")
 
-client = mqtt.Client()
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 client.on_connect = on_connect
 try:
     client.connect("test.mosquitto.org", 1883, 5)

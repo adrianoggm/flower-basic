@@ -67,7 +67,7 @@ class FLClientMQTT:
         )
 
         # Configurar cliente MQTT para comunicación con broker fog
-        self.mqtt = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
+        self.mqtt = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
         self.mqtt.on_connect = self._on_connect
         self.mqtt.on_message = self._on_message
         self.mqtt.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
