@@ -9,7 +9,7 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 10
     assignees:
-      - "adriano.garcia"
+      - "adrianoggm"
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"
@@ -24,6 +24,6 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 5
     assignees:
-      - "adriano.garcia"
+      - "adrianoggm"
     commit-message:
       prefix: "ci"

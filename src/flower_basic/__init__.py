@@ -20,6 +20,7 @@ __author__ = "Adriano Garcia"
 __email__ = "adriano.garcia@example.com"
 
 from .baseline_model import BaselineTrainer
+from .broker_fog import weighted_average
 from .compare_models import ModelComparator
 from .model import ECGModel, get_parameters, set_parameters
 from .utils import (
@@ -29,7 +30,6 @@ from .utils import (
     state_dict_to_numpy,
     statistical_significance_test,
 )
-from .broker_fog import weighted_average
 
 __all__ = [
     "ModelComparator",
