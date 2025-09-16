@@ -150,13 +150,15 @@ jobs:
       - name: Validate project structure
         run: |
           # Check that all required files exist
-          test -f model.py || exit 1
-          test -f utils.py || exit 1
-          test -f broker_fog.py || exit 1
-          test -f server.py || exit 1
-          test -f client.py || exit 1
+          test -f src/flower_basic/model.py || exit 1
+          test -f src/flower_basic/utils.py || exit 1
+          test -f src/flower_basic/broker_fog.py || exit 1
+          test -f src/flower_basic/server.py || exit 1
+          test -f src/flower_basic/client.py || exit 1
           test -f requirements.txt || exit 1
           test -d tests/ || exit 1
+          test -f pyproject.toml || exit 1
+          test -f src/flower_basic/__init__.py || exit 1
           echo "✅ Project structure is valid"
 
       - name: Run automated code quality check
