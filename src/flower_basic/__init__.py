@@ -21,12 +21,15 @@ __email__ = "adriano.garcia@example.com"
 
 from .baseline_model import BaselineTrainer
 from .compare_models import ModelComparator
-from .model import ECGModel
+from .model import ECGModel, get_parameters, set_parameters
 from .utils import (
     detect_data_leakage,
+    load_ecg5000_openml,
     load_ecg5000_subject_based,
+    state_dict_to_numpy,
     statistical_significance_test,
 )
+from .broker_fog import weighted_average
 
 __all__ = [
     "ModelComparator",
