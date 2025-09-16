@@ -81,6 +81,7 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["flower_basic*"]
 exclude = ["tests*", "docs*"]
 
 [tool.black]
