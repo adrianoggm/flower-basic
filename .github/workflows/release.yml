@@ -188,7 +188,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Download deployment artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v5
         with:
           name: flower-fog-deployment
 
