@@ -1,0 +1,36 @@
+{
+  "demo_info": {
+    "date": "2025-09-27T17:49:33.152462",
+    "type": "Multi-Dataset Federated Learning Demo",
+    "datasets": [
+      "WESAD",
+      "SWELL"
+    ]
+  },
+  "datasets": {
+    "wesad": {
+      "name": "WESAD",
+      "subjects": 15,
+      "features": 22,
+      "best_model": "Random Forest",
+      "best_accuracy": 0.828,
+      "modality": "Physiological"
+    },
+    "swell": {
+      "name": "SWELL",
+      "subjects": 25,
+      "features": 16,
+      "best_model": "SVM",
+      "best_accuracy": 0.674,
+      "modality": "Computer Interaction",
+      "verified_accuracy": 0.6719803801348866
+    }
+  },
+  "federated_scenario": {
+    "avg_baseline": 0.751,
+    "target_conservative": 0.6759000000000001,
+    "target_optimistic": 0.7885500000000001,
+    "privacy_preserved": true,
+    "cross_modal": true
+  }
+}

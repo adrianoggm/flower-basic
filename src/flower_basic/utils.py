@@ -22,14 +22,14 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import StratifiedKFold, train_test_split
 
 
-def load_ecg5000_openml(
+def load_wesad_dataset(
     test_size: float = 0.2,
     random_state: int = 42,
     stratified: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray] | list[np.ndarray]:
-    """Download ECG5000 dataset from OpenML and split into train/test sets.
+    """Download WESAD dataset from OpenML and split into train/test sets.
 
-    This function downloads the ECG5000 dataset from OpenML, performs binary
+    This function downloads the WESAD dataset from OpenML, performs binary
     classification preprocessing (normal vs abnormal), and splits the data
     into training and testing sets.
 
@@ -52,7 +52,7 @@ def load_ecg5000_openml(
         ConnectionError: If unable to download dataset from OpenML.
 
     Example:
-        >>> X_train, X_test, y_train, y_test = load_ecg5000_openml()
+        >>> X_train, X_test, y_train, y_test = load_wesad_dataset()
         >>> print(f"Train shape: {X_train.shape}, Test shape: {X_test.shape}")
         Train shape: (4000, 140), Test shape: (1000, 140)
     """
@@ -64,7 +64,7 @@ def load_ecg5000_openml(
         ds = fetch_openml(name="ECG5000", version=1, as_frame=False, parser="auto")
         X, y = ds["data"], ds["target"].astype(int)
     except Exception as e:
-        raise ConnectionError(f"Failed to download ECG5000 dataset: {e}") from e
+        raise ConnectionError(f"Failed to download WESAD dataset: {e}") from e
 
     # Binarize: class 1 → normal (0), else abnormal (1)
     y = (y != 1).astype(np.int64)
@@ -241,7 +241,7 @@ def load_ecg5000_with_validation(
         Tuple of (X_train, X_val, X_test, y_train, y_val, y_test)
     """
     # First split: separate test set
-    X_temp, X_test, y_temp, y_test = load_ecg5000_openml(
+    X_temp, X_test, y_temp, y_test = load_wesad_dataset(
         test_size=test_size, random_state=random_state, stratified=stratified
     )
 

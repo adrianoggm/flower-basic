@@ -22,20 +22,57 @@ __email__ = "adriano.garcia@example.com"
 from .baseline_model import BaselineTrainer
 from .broker_fog import weighted_average
 from .compare_models import ModelComparator
+from .datasets import load_wesad_dataset, load_swell_dataset
 from .model import ECGModel, get_parameters, set_parameters
 from .utils import (
     detect_data_leakage,
-    load_ecg5000_openml,
-    load_ecg5000_subject_based,
     state_dict_to_numpy,
     statistical_significance_test,
 )
 
+# Deprecated ECG5000 imports - will be removed in v0.2.0
+import warnings
+try:
+    from .datasets import load_ecg5000_dataset
+    from .utils import load_ecg5000_subject_based
+    
+    # Wrap deprecated functions with warnings
+    def _deprecated_load_ecg5000_dataset(*args, **kwargs):
+        warnings.warn(
+            "load_ecg5000_dataset is deprecated and will be removed in v0.2.0. "
+            "Use load_wesad_dataset or load_swell_dataset instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        return load_ecg5000_dataset(*args, **kwargs)
+    
+    def _deprecated_load_ecg5000_subject_based(*args, **kwargs):
+        warnings.warn(
+            "load_ecg5000_subject_based is deprecated and will be removed in v0.2.0. "
+            "Use load_wesad_dataset or load_swell_dataset with subject partitioning instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        return load_ecg5000_subject_based(*args, **kwargs)
+    
+except ImportError:
+    # ECG5000 modules not available
+    pass
+
 __all__ = [
     "ModelComparator",
-    "BaselineTrainer",
+    "BaselineTrainer", 
     "ECGModel",
-    "load_ecg5000_subject_based",
+    # Primary dataset loaders
+    "load_wesad_dataset",
+    "load_swell_dataset",
+    # Utility functions
     "detect_data_leakage",
     "statistical_significance_test",
+    "get_parameters",
+    "set_parameters",
+    "weighted_average",
+    # Deprecated (will be removed in v0.2.0)
+    "_deprecated_load_ecg5000_dataset",
+    "_deprecated_load_ecg5000_subject_based",
 ]

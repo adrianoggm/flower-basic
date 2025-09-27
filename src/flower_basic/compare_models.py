@@ -32,10 +32,9 @@ from tabulate import tabulate
 
 from .baseline_model import BaselineTrainer
 from .model import ECGModel
+from .datasets import load_wesad_dataset, partition_wesad_by_subjects
 from .utils import (
     detect_data_leakage,
-    load_ecg5000_cross_validation,
-    load_ecg5000_subject_based,
     statistical_significance_test,
 )
 
@@ -303,10 +302,10 @@ class ModelComparator:
         print("*** Model Performance Comparison ***")
         print("=" * 60)
 
-        # Load data with subject-based simulation to prevent data leakage
-        print("Loading ECG5000 dataset with subject-based simulation...")
-        X_train, X_test, y_train, y_test = load_ecg5000_subject_based(
-            test_size=test_size, random_state=random_state, num_subjects=5
+        # Load data with subject-based partitioning to prevent data leakage
+        print("Loading WESAD dataset with subject-based simulation...")
+        X_train, X_test, y_train, y_test = load_wesad_dataset(
+            test_size=test_size, random_state=random_state
         )
 
         print(
@@ -708,11 +707,21 @@ class ModelComparator:
         print("*** Robust Model Performance Comparison with Statistical Validation ***")
         print("=" * 80)
 
-        # Load data with subject simulation
-        print("Loading ECG5000 dataset with subject-based simulation...")
-        cv_splits = load_ecg5000_cross_validation(
-            n_splits=n_cv_folds, random_state=random_state, num_subjects=5
-        )
+        # Load data with cross-validation splits
+        print("Loading WESAD dataset with cross-validation...")
+        # For now, we'll use a simple approach - load the data once and create CV splits
+        from sklearn.model_selection import StratifiedKFold
+        
+        X_full, _, y_full, _ = load_wesad_dataset(test_size=0.1, random_state=random_state)
+        
+        # Create cross-validation splits
+        cv = StratifiedKFold(n_splits=n_cv_folds, shuffle=True, random_state=random_state)
+        cv_splits = []
+        
+        for train_idx, test_idx in cv.split(X_full, y_full):
+            X_train, X_test = X_full[train_idx], X_full[test_idx]
+            y_train, y_test = y_full[train_idx], y_full[test_idx]
+            cv_splits.append((X_train, X_test, y_train, y_test))
 
         # Store results for statistical analysis
         centralized_results = []

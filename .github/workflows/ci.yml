@@ -47,6 +47,10 @@ jobs:
         run: |
           python -c "import numpy as np; import torch; print(f'NumPy: {np.__version__}'); print(f'PyTorch: {torch.__version__}'); x = torch.randn(3, 3); print('NumPy conversion test:', x.numpy().shape)"
 
+      - name: Check for deprecated ECG5000 usage
+        run: |
+          python scripts/check_deprecated_simple.py
+
       - name: Run code formatting checks
         run: |
           # Check if code is properly formatted

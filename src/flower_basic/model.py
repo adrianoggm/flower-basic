@@ -26,7 +26,7 @@ class ECGModel(nn.Module):
 
         Args:
             in_channels: Number of input channels (default: 1 for ECG)
-            seq_len: Length of input sequence (default: 140 for ECG5000)
+            seq_len: Variable length based on dataset (WESAD/SWELL))
         """
         super().__init__()
         # Two conv → pool blocks

@@ -2,12 +2,12 @@
 client.py - Cliente Local de Aprendizaje Federado
 
 Este módulo implementa clientes locales que:
-1. Entrenan modelos CNN en datos ECG5000 locales
+1. Entrenan modelos CNN en datos WESAD locales
 2. Publican actualizaciones de modelo vía MQTT al broker fog
 3. Reciben modelos globales del servidor central vía MQTT
 
 ARQUITECTURA:
-- Cada cliente entrena en su partición local de datos ECG5000
+- Cada cliente entrena en su partición local de datos WESAD
 - Envía actualizaciones al broker fog vía topic 'fl/updates'
 - El broker fog agrega K clientes por región antes de enviar al servidor central
 - Recibe modelos globales actualizados vía topic 'fl/global_model'
@@ -26,7 +26,7 @@ import paho.mqtt.client as mqtt
 import torch
 
 from .model import ECGModel
-from .utils import load_ecg5000_openml
+from .datasets import load_wesad_dataset
 
 # -----------------------------------------------------------------------------
 # CONFIGURACIÓN MQTT
@@ -45,7 +45,7 @@ class FLClientMQTT:
     Cliente de aprendizaje federado que usa MQTT para comunicación.
 
     Funciones principales:
-    1. Entrenamiento local en datos ECG5000 particionados
+    1. Entrenamiento local en datos WESAD particionados
     2. Publicación de actualizaciones al broker fog
     3. Recepción de modelos globales del servidor central
     4. Sincronización con la arquitectura fog computing
@@ -56,7 +56,7 @@ class FLClientMQTT:
         self.model = ECGModel()
 
         # Cargar y preparar datos locales ECG5000
-        X_train, X_test, y_train, y_test = load_ecg5000_openml()
+        X_train, X_test, y_train, y_test = load_wesad_dataset()
         self.train_loader = torch.utils.data.DataLoader(
             torch.utils.data.TensorDataset(
                 torch.from_numpy(X_train).float(),
@@ -115,7 +115,7 @@ class FLClientMQTT:
         Ejecuta una ronda de entrenamiento local y publica la actualización.
 
         Pasos:
-        1. Entrena el modelo local por 1 época en datos ECG5000
+        1. Entrena el modelo local por 1 época en datos WESAD
         2. Serializa los pesos actualizados
         3. Publica la actualización al broker fog vía MQTT
         4. Espera el próximo modelo global del servidor central
@@ -196,7 +196,7 @@ if __name__ == "__main__":
     Punto de entrada principal para ejecutar un cliente local.
 
     Configura y ejecuta un cliente que:
-    - Entrena en datos ECG5000 locales
+    - Entrena en datos WESAD locales
     - Participa en aprendizaje federado vía MQTT
     - Se comunica con la arquitectura fog computing
     """

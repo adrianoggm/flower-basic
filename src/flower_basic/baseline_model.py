@@ -29,7 +29,7 @@ from sklearn.metrics import (
 from torch.utils.data import DataLoader, TensorDataset
 
 from .model import ECGModel
-from .utils import load_ecg5000_openml
+from .datasets import load_wesad_dataset
 
 
 class BaselineTrainer:
@@ -385,8 +385,8 @@ def main():
     print("=" * 60)
 
     # Load data
-    print("📥 Loading ECG5000 dataset...")
-    X_train, X_test, y_train, y_test = load_ecg5000_openml(
+    print("📥 Loading WESAD dataset...")
+    X_train, X_test, y_train, y_test = load_wesad_dataset(
         test_size=args.test_size, random_state=args.random_state
     )
 
