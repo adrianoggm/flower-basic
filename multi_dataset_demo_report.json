@@ -1,36 +1,96 @@
 {
-  "demo_info": {
-    "date": "2025-09-27T17:49:33.152462",
-    "type": "Multi-Dataset Federated Learning Demo",
-    "datasets": [
-      "WESAD",
-      "SWELL"
-    ]
-  },
-  "datasets": {
-    "wesad": {
-      "name": "WESAD",
-      "subjects": 15,
-      "features": 22,
-      "best_model": "Random Forest",
-      "best_accuracy": 0.828,
-      "modality": "Physiological"
+  "wesad": {
+    "name": "wesad",
+    "train_samples": 572,
+    "test_samples": 287,
+    "n_features": 30,
+    "train_subjects": 10,
+    "train_distribution": {
+      "0": 372,
+      "1": 200
     },
-    "swell": {
-      "name": "SWELL",
-      "subjects": 25,
-      "features": 16,
-      "best_model": "SVM",
-      "best_accuracy": 0.674,
-      "modality": "Computer Interaction",
-      "verified_accuracy": 0.6719803801348866
+    "test_subjects": 5,
+    "test_distribution": {
+      "0": 185,
+      "1": 102
+    },
+    "metrics": {
+      "logistic_regression": {
+        "accuracy": 0.9303135888501742,
+        "macro_f1": 0.9213267543859649
+      },
+      "random_forest": {
+        "accuracy": 0.9616724738675958,
+        "macro_f1": 0.9587821341375844
+      }
     }
   },
-  "federated_scenario": {
-    "avg_baseline": 0.751,
-    "target_conservative": 0.6759000000000001,
-    "target_optimistic": 0.7885500000000001,
-    "privacy_preserved": true,
-    "cross_modal": true
+  "swell": {
+    "name": "swell",
+    "train_samples": 2500,
+    "test_samples": 639,
+    "n_features": 17,
+    "train_subjects": 20,
+    "train_distribution": {
+      "0": 822,
+      "1": 1678
+    },
+    "test_subjects": 5,
+    "test_distribution": {
+      "0": 206,
+      "1": 433
+    },
+    "metrics": {
+      "logistic_regression": {
+        "accuracy": 0.9530516431924883,
+        "macro_f1": 0.9481207646842322
+      },
+      "random_forest": {
+        "accuracy": 0.9921752738654147,
+        "macro_f1": 0.9910337685954588
+      }
+    }
+  },
+  "multimodal": {
+    "name": "multimodal",
+    "train_samples": 2453,
+    "validation_samples": 619,
+    "test_samples": 926,
+    "n_features": 48,
+    "train_subjects": 24,
+    "validation_subjects": 6,
+    "test_subjects": 10,
+    "train_sources": {
+      "wesad": 457,
+      "swell": 1996
+    },
+    "validation_sources": {
+      "wesad": 115,
+      "swell": 504
+    },
+    "test_sources": {
+      "wesad": 287,
+      "swell": 639
+    },
+    "metrics": {
+      "logistic_regression": {
+        "accuracy": 0.908207343412527,
+        "macro_f1": 0.9055613347395348
+      },
+      "random_forest": {
+        "accuracy": 0.9751619870410367,
+        "macro_f1": 0.974572436559435
+      }
+    },
+    "validation_metrics": {
+      "logistic_regression": {
+        "accuracy": 0.8820678513731826,
+        "macro_f1": 0.8740695325019159
+      },
+      "random_forest": {
+        "accuracy": 0.9450726978998385,
+        "macro_f1": 0.9427375821688215
+      }
+    }
   }
 }

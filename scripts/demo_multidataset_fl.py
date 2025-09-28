@@ -1,217 +1,132 @@
 #!/usr/bin/env python3
-"""Demo: Multi-Dataset Federated Learning with WESAD and SWELL.
-
-This demo showcases the new multi-dataset capabilities replacing the deprecated
-ECG5000 dataset. It demonstrates federated learning across different stress
-detection datasets with proper subject-based partitioning.
-
-Features demonstrated:
-- WESAD dataset for physiological stress detection
-- SWELL dataset for multimodal stress detection in knowledge work  
-- Subject-based federated partitioning
-- Cross-dataset model evaluation
-- Modern Python dataset loading patterns
-
-Usage:
-    python scripts/demo_multidataset_fl.py
-"""
+"""Demo: Multi-dataset FL with real WESAD and SWELL data."""
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+from typing import List, Tuple
+
 import numpy as np
-import torch
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+SRC_PATH = PROJECT_ROOT / "src"
+if str(SRC_PATH) not in sys.path:
+    sys.path.insert(0, str(SRC_PATH))
 
 from flower_basic.datasets import (
-    get_swell_info,
-    load_swell_dataset,
-    load_wesad_dataset,
     partition_swell_by_subjects,
     partition_wesad_by_subjects,
 )
-from flower_basic.model import ECGModel
+from flower_basic.datasets.multimodal import load_real_multimodal_dataset
 
 
-def demo_dataset_loading():
-    """Demonstrate loading of WESAD and SWELL datasets."""
-    print("=== Multi-Dataset Loading Demo ===\n")
-    
-    # WESAD Dataset
-    print("1. Loading WESAD Dataset (Physiological Stress Detection)")
-    print("-" * 55)
-    
-    try:
-        X_train, X_test, y_train, y_test = load_wesad_dataset(
-            subjects=['S2', 'S3', 'S4', 'S5'],  # Use specific subjects
-            test_size=0.3,
-            random_state=42
+def _split_by_subject(
+    subject_ids: np.ndarray, test_size: float = 0.2, random_state: int = 42
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Create masks for subject-based partitioning."""
+
+    unique_subjects = np.unique(subject_ids)
+    if unique_subjects.size < 2:
+        raise ValueError("Not enough subjects to split")
+
+    train_subjects, val_subjects = train_test_split(
+        unique_subjects,
+        test_size=test_size,
+        random_state=random_state,
+        stratify=None,
+    )
+
+    train_mask = np.isin(subject_ids, train_subjects)
+    val_mask = np.isin(subject_ids, val_subjects)
+    if not train_mask.any() or not val_mask.any():
+        raise ValueError("Subject split produced empty partitions")
+
+    return train_mask, val_mask
+
+
+def _print_partition_summary(
+    name: str, partitions: List[Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]
+) -> None:
+    """Display a concise summary for each federated partition."""
+    print(f"{name} partitions: {len(partitions)} clients")
+    for idx, (X_train, X_test, y_train, y_test) in enumerate(partitions, start=1):
+        train_dist = dict(zip(*np.unique(y_train, return_counts=True)))
+        test_dist = dict(zip(*np.unique(y_test, return_counts=True)))
+        print(
+            f"  Client {idx}: {X_train.shape[0]} train / {X_test.shape[0]} test samples"
+            f" | classes train={train_dist} test={test_dist}"
         )
-        
-        print(f"✓ WESAD loaded successfully:")
-        print(f"  Training samples: {X_train.shape[0]} x {X_train.shape[1]} features")
-        print(f"  Test samples: {X_test.shape[0]} x {X_test.shape[1]} features") 
-        print(f"  Classes: {np.unique(y_train)} (stress levels)")
-        print(f"  Class distribution: {dict(zip(*np.unique(y_train, return_counts=True)))}")
-        
-    except Exception as e:
-        print(f"✗ WESAD loading failed: {e}")
-        print("  Note: Ensure WESAD data is available in data/WESAD/")
-    
-    print()
-    
-    # SWELL Dataset
-    print("2. Loading SWELL Dataset (Multimodal Knowledge Work Stress)")
-    print("-" * 58)
-    
-    try:
-        X_train, X_test, y_train, y_test = load_swell_dataset(
-            test_size=0.3,
-            random_state=42
-        )
-        
-        print(f"✓ SWELL loaded successfully:")
-        print(f"  Training samples: {X_train.shape[0]} x {X_train.shape[1]} features")
-        print(f"  Test samples: {X_test.shape[0]} x {X_test.shape[1]} features")
-        print(f"  Classes: {np.unique(y_train)} (0=no stress, 1=stress)")
-        print(f"  Class distribution: {dict(zip(*np.unique(y_train, return_counts=True)))}")
-        
-        # Get detailed info
-        info = get_swell_info()
-        if 'n_subjects' in info:
-            print(f"  Available subjects: {info['n_subjects']}")
-            print(f"  Modalities used: computer interaction + physiology")
-            
-    except Exception as e:
-        print(f"✗ SWELL loading failed: {e}")
-        print("  Note: Ensure SWELL data is available in data/SWELL/")
-    
-    print()
 
 
-def demo_federated_partitioning():
-    """Demonstrate subject-based federated partitioning."""
-    print("=== Federated Partitioning Demo ===\n")
-    
-    # WESAD Federated Partitioning
-    print("1. WESAD Subject-Based Federated Partitioning")
-    print("-" * 46)
-    
-    try:
-        partitions = partition_wesad_by_subjects(num_clients=3)
-        
-        print(f"✓ Created {len(partitions)} federated partitions from WESAD:")
-        
-        for i, (X_train, X_test, y_train, y_test) in enumerate(partitions):
-            print(f"  Client {i+1}: {X_train.shape[0]} train, {X_test.shape[0]} test samples")
-            class_dist = dict(zip(*np.unique(y_train, return_counts=True)))
-            print(f"           Classes: {class_dist}")
-            
-    except Exception as e:
-        print(f"✗ WESAD partitioning failed: {e}")
-    
-    print()
-    
-    # SWELL Federated Partitioning  
-    print("2. SWELL Subject-Based Federated Partitioning")
-    print("-" * 46)
-    
-    try:
-        partitions = partition_swell_by_subjects(
-            n_partitions=3, 
-            random_state=42
-        )
-        
-        print(f"✓ Created {len(partitions)} federated partitions from SWELL:")
-        
-        for i, (X_train, X_test, y_train, y_test) in enumerate(partitions):
-            print(f"  Client {i+1}: {X_train.shape[0]} train, {X_test.shape[0]} test samples")
-            class_dist = dict(zip(*np.unique(y_train, return_counts=True)))
-            print(f"           Classes: {class_dist}")
-            
-    except Exception as e:
-        print(f"✗ SWELL partitioning failed: {e}")
-    
-    print()
+def demo_dataset_loading() -> None:
+    """Show dataset statistics using real data only."""
+    wesad_split, swell_split, combined = load_real_multimodal_dataset()
+
+    print("=== Dataset Loading ===")
+    print(
+        f"WESAD: {wesad_split.X_train.shape[0]} train ({np.unique(wesad_split.train_subject_ids).size} subjects) / "
+        f"{wesad_split.X_test.shape[0]} test ({np.unique(wesad_split.test_subject_ids).size} subjects) with {wesad_split.X_train.shape[1]} features"
+    )
+    print(
+        f"SWELL: {swell_split.X_train.shape[0]} train ({np.unique(swell_split.train_subject_ids).size} subjects) / "
+        f"{swell_split.X_test.shape[0]} test ({np.unique(swell_split.test_subject_ids).size} subjects) with {swell_split.X_train.shape[1]} features"
+    )
+    print(
+        f"Combined: {combined.X_train.shape[0]} train ({np.unique(combined.train_subject_ids).size} subjects) / "
+        f"{combined.X_test.shape[0]} test ({np.unique(combined.test_subject_ids).size} subjects) with {combined.X_train.shape[1]} aligned features"
+    )
 
 
-def demo_model_training():
-    """Demonstrate model training with new datasets."""
-    print("=== Model Training Demo ===\n")
-    
-    print("Training adaptive model with WESAD data...")
-    
-    try:
-        # Load WESAD data
-        X_train, X_test, y_train, y_test = load_wesad_dataset(
-            subjects=['S2', 'S3', 'S4'],
-            test_size=0.3,
-            random_state=42
-        )
-        
-        # Create adaptive model
-        input_dim = X_train.shape[1]
-        model = ECGModel(seq_len=input_dim, num_classes=2)
-        
-        # Convert to PyTorch tensors
-        X_train_tensor = torch.FloatTensor(X_train).unsqueeze(1)  # Add channel dimension
-        y_train_tensor = torch.LongTensor(y_train)
-        X_test_tensor = torch.FloatTensor(X_test).unsqueeze(1)
-        
-        # Simple training loop
-        criterion = torch.nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-        
-        model.train()
-        for epoch in range(5):  # Quick demo training
-            optimizer.zero_grad()
-            outputs = model(X_train_tensor)
-            loss = criterion(outputs, y_train_tensor)
-            loss.backward()
-            optimizer.step()
-            
-            if epoch % 2 == 0:
-                print(f"  Epoch {epoch+1}/5, Loss: {loss.item():.4f}")
-        
-        # Evaluate
-        model.eval()
-        with torch.no_grad():
-            test_outputs = model(X_test_tensor)
-            _, predicted = torch.max(test_outputs.data, 1)
-            accuracy = accuracy_score(y_test, predicted.numpy())
-            
-        print(f"✓ Model training completed!")
-        print(f"  Final test accuracy: {accuracy:.3f}")
-        print(f"  Model adapted to {input_dim} features from WESAD dataset")
-        
-    except Exception as e:
-        print(f"✗ Model training failed: {e}")
-    
-    print()
+def demo_federated_partitioning() -> None:
+    """Demonstrate subject-based partitioning for both datasets."""
+    print("\n=== Federated Partitioning ===")
+    wesad_partitions = partition_wesad_by_subjects(num_clients=3)
+    swell_partitions = partition_swell_by_subjects(
+        n_partitions=3, modalities=["computer"]
+    )
+
+    _print_partition_summary("WESAD", wesad_partitions)
+    _print_partition_summary("SWELL", swell_partitions)
 
 
-def main():
-    """Main demo function."""
-    print("🚀 Multi-Dataset Federated Learning Demo")
-    print("=" * 50)
-    print("Demonstrating WESAD and SWELL datasets replacing deprecated ECG5000\n")
-    
-    # Run all demos
+def demo_model_training() -> None:
+    """Train a simple baseline on the combined dataset."""
+    print("\n=== Multimodal Baseline Training ===")
+    _, _, combined = load_real_multimodal_dataset()
+
+    train_mask, val_mask = _split_by_subject(combined.train_subject_ids)
+
+    X_train = combined.X_train[train_mask]
+    y_train = combined.y_train[train_mask]
+    X_val = combined.X_train[val_mask]
+    y_val = combined.y_train[val_mask]
+
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_val_scaled = scaler.transform(X_val)
+    X_test_scaled = scaler.transform(combined.X_test)
+
+    model = LogisticRegression(max_iter=2000)
+    model.fit(X_train_scaled, y_train)
+
+    val_accuracy = accuracy_score(y_val, model.predict(X_val_scaled))
+    test_accuracy = accuracy_score(combined.y_test, model.predict(X_test_scaled))
+
+    print(f"Validation accuracy (subject-based): {val_accuracy:.3f}")
+    print(f"Test accuracy (subject-based): {test_accuracy:.3f}")
+
+
+def main() -> None:
+    """Run the end-to-end demo."""
+    print("=== Multi-dataset Federated Learning Demo ===\n")
     demo_dataset_loading()
     demo_federated_partitioning()
     demo_model_training()
-    
-    print("=== Summary ===")
-    print("✓ Successfully demonstrated multi-dataset federated learning")
-    print("✓ WESAD: Physiological stress detection with wearable sensors")
-    print("✓ SWELL: Multimodal stress detection in knowledge work")
-    print("✓ Subject-based partitioning prevents data leakage")
-    print("✓ Adaptive models handle variable input dimensions")
-    print()
-    print("🎯 Migration from ECG5000 to WESAD/SWELL is complete!")
-    print("   - More realistic federated learning scenarios")
-    print("   - Multiple subjects for proper FL evaluation")  
-    print("   - Multimodal capabilities with SWELL")
-    print("   - Modern dataset loading patterns")
 
 
 if __name__ == "__main__":

@@ -28,8 +28,8 @@ from sklearn.metrics import (
 )
 from torch.utils.data import DataLoader, TensorDataset
 
-from .model import ECGModel
 from .datasets import load_wesad_dataset
+from .model import ECGModel
 
 
 class BaselineTrainer:
@@ -221,11 +221,11 @@ class BaselineTrainer:
         start_time = time.time()
 
         if verbose:
-            print(f"🚀 Starting centralized training for {epochs} epochs...")
+            print(f"ð Starting centralized training for {epochs} epochs...")
             print(
-                f"📊 Model parameters: {sum(p.numel() for p in self.model.parameters()):,}"
+                f"ð Model parameters: {sum(p.numel() for p in self.model.parameters()):,}"
             )
-            print(f"🔧 Device: {self.device}")
+            print(f"ð§ Device: {self.device}")
             print("-" * 60)
 
         for epoch in range(epochs):
@@ -257,8 +257,8 @@ class BaselineTrainer:
 
         if verbose:
             print("-" * 60)
-            print(f"✅ Training completed in {training_time:.2f} seconds")
-            print("📈 Final Test Metrics:")
+            print(f"â Training completed in {training_time:.2f} seconds")
+            print("ð Final Test Metrics:")
             for metric, value in final_metrics.items():
                 print(f"   {metric.capitalize()}: {value:.4f}")
 
@@ -307,10 +307,10 @@ class BaselineTrainer:
         # Create training plots
         self.plot_training_history(output_dir)
 
-        print(f"💾 Results saved to {output_dir}/")
-        print(f"   📊 Metrics: {metrics_file}")
-        print(f"   🧠 Model: {model_file}")
-        print(f"   📈 Plots: {output_dir}/training_plots.png")
+        print(f"ð¾ Results saved to {output_dir}/")
+        print(f"   ð Metrics: {metrics_file}")
+        print(f"   ð§  Model: {model_file}")
+        print(f"   ð Plots: {output_dir}/training_plots.png")
 
     def plot_training_history(self, output_dir: str):
         """Plot training history.
@@ -375,9 +375,9 @@ def main():
     else:
         device = torch.device(args.device)
 
-    print("🔥 Baseline ECG Model Training")
-    print(f"📱 Device: {device}")
-    print("⚙️  Configuration:")
+    print("ð¥ Baseline ECG Model Training")
+    print(f"ð+/- Device: {device}")
+    print("âï¸  Configuration:")
     print(f"   Epochs: {args.epochs}")
     print(f"   Batch Size: {args.batch_size}")
     print(f"   Learning Rate: {args.lr}")
@@ -385,12 +385,12 @@ def main():
     print("=" * 60)
 
     # Load data
-    print("📥 Loading WESAD dataset...")
+    print("ð¥ Loading WESAD dataset...")
     X_train, X_test, y_train, y_test = load_wesad_dataset(
         test_size=args.test_size, random_state=args.random_state
     )
 
-    print("📊 Dataset info:")
+    print("ð Dataset info:")
     print(f"   Train samples: {len(X_train)}")
     print(f"   Test samples: {len(X_test)}")
     print(f"   Features: {X_train.shape[1]}")
@@ -418,8 +418,8 @@ def main():
     # Save results
     trainer.save_results(results, args.output_dir)
 
-    print("\n🎉 Baseline training completed successfully!")
-    print("📊 Use these results to compare with federated learning performance.")
+    print("\nð Baseline training completed successfully!")
+    print("ð Use these results to compare with federated learning performance.")
 
 
 if __name__ == "__main__":

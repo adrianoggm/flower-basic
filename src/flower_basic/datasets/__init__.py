@@ -19,8 +19,8 @@ All loaders follow consistent interfaces and provide:
 from __future__ import annotations
 
 from .ecg5000 import load_ecg5000_dataset, partition_ecg5000_by_subjects
+from .swell import get_swell_info, load_swell_dataset, partition_swell_by_subjects
 from .wesad import load_wesad_dataset, partition_wesad_by_subjects
-from .swell import load_swell_dataset, partition_swell_by_subjects, get_swell_info
 
 __all__ = [
     # ECG5000 (DEPRECATED)

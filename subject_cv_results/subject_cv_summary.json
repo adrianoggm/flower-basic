@@ -1,0 +1,56 @@
+[
+  {
+    "dataset": "wesad",
+    "model": "logistic_regression",
+    "accuracy_mean": 0.8650278797769617,
+    "accuracy_std": 0.0786096041796841,
+    "macro_f1_mean": 0.8542372129338798,
+    "macro_f1_std": 0.0868535128429649,
+    "n_folds": 5
+  },
+  {
+    "dataset": "wesad",
+    "model": "random_forest",
+    "accuracy_mean": 0.7684278525771794,
+    "accuracy_std": 0.08317317193141549,
+    "macro_f1_mean": 0.7382877566259283,
+    "macro_f1_std": 0.08067188691243701,
+    "n_folds": 5
+  },
+  {
+    "dataset": "swell",
+    "model": "logistic_regression",
+    "accuracy_mean": 0.9512429158997765,
+    "accuracy_std": 0.009116581101698938,
+    "macro_f1_mean": 0.9460928239544089,
+    "macro_f1_std": 0.009494513890637477,
+    "n_folds": 5
+  },
+  {
+    "dataset": "swell",
+    "model": "random_forest",
+    "accuracy_mean": 0.9885418209892842,
+    "accuracy_std": 0.006451799676124574,
+    "macro_f1_mean": 0.986879318217096,
+    "macro_f1_std": 0.007511770771113557,
+    "n_folds": 5
+  },
+  {
+    "dataset": "combined",
+    "model": "logistic_regression",
+    "accuracy_mean": 0.9312465792152527,
+    "accuracy_std": 0.026103630423673425,
+    "macro_f1_mean": 0.9277372609858711,
+    "macro_f1_std": 0.029311391133471622,
+    "n_folds": 5
+  },
+  {
+    "dataset": "combined",
+    "model": "random_forest",
+    "accuracy_mean": 0.9447282985104684,
+    "accuracy_std": 0.03330133918741973,
+    "macro_f1_mean": 0.9409389123164285,
+    "macro_f1_std": 0.03726984407211831,
+    "n_folds": 5
+  }
+]

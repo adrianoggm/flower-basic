@@ -19,10 +19,13 @@ __version__ = "0.1.0"
 __author__ = "Adriano Garcia"
 __email__ = "adriano.garcia@example.com"
 
+# Deprecated ECG5000 imports - will be removed in v0.2.0
+import warnings
+
 from .baseline_model import BaselineTrainer
 from .broker_fog import weighted_average
 from .compare_models import ModelComparator
-from .datasets import load_wesad_dataset, load_swell_dataset
+from .datasets import load_swell_dataset, load_wesad_dataset
 from .model import ECGModel, get_parameters, set_parameters
 from .utils import (
     detect_data_leakage,
@@ -30,38 +33,36 @@ from .utils import (
     statistical_significance_test,
 )
 
-# Deprecated ECG5000 imports - will be removed in v0.2.0
-import warnings
 try:
     from .datasets import load_ecg5000_dataset
     from .utils import load_ecg5000_subject_based
-    
+
     # Wrap deprecated functions with warnings
     def _deprecated_load_ecg5000_dataset(*args, **kwargs):
         warnings.warn(
             "load_ecg5000_dataset is deprecated and will be removed in v0.2.0. "
             "Use load_wesad_dataset or load_swell_dataset instead.",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         return load_ecg5000_dataset(*args, **kwargs)
-    
+
     def _deprecated_load_ecg5000_subject_based(*args, **kwargs):
         warnings.warn(
             "load_ecg5000_subject_based is deprecated and will be removed in v0.2.0. "
             "Use load_wesad_dataset or load_swell_dataset with subject partitioning instead.",
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=2,
         )
         return load_ecg5000_subject_based(*args, **kwargs)
-    
+
 except ImportError:
     # ECG5000 modules not available
     pass
 
 __all__ = [
     "ModelComparator",
-    "BaselineTrainer", 
+    "BaselineTrainer",
     "ECGModel",
     # Primary dataset loaders
     "load_wesad_dataset",

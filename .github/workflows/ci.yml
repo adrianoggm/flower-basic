@@ -1,4 +1,4 @@
-name: CI - Tests and Code Quality
+﻿name: CI - Tests and Code Quality
 
 on:
   push:
@@ -40,8 +40,8 @@ jobs:
 
       - name: Verify package installation
         run: |
-          python -c "import flower_basic; print('✅ Package flower_basic imported successfully')"
-          python -c "from flower_basic import ECGModel; print('✅ ECGModel imported successfully')"
+          python -c "import flower_basic; print('âœ… Package flower_basic imported successfully')"
+          python -c "from flower_basic import ECGModel; print('âœ… ECGModel imported successfully')"
 
       - name: Verify NumPy installation
         run: |
@@ -120,18 +120,18 @@ jobs:
       #     from flower_basic import ECGModel
       #     from flower_basic import load_ecg5000_openml
       #     from flower_basic import weighted_average
-      #     print('✅ All core components imported successfully')
+      #     print('âœ… All core components imported successfully')
       #
       #     # Test model initialization
       #     model = ECGModel()
-      #     print('✅ ECG Model initialized successfully')
+      #     print('âœ… ECG Model initialized successfully')
       #
       #     # Test utilities
       #     try:
       #         X_train, X_test, y_train, y_test = load_ecg5000_openml()
-      #         print('✅ Data loading works')
+      #         print('âœ… Data loading works')
       #     except:
-      #         print('⚠️ Data loading requires internet connection')
+      #         print('âš ï¸ Data loading requires internet connection')
       #     "
 
   build-validation:
@@ -163,7 +163,7 @@ jobs:
           test -d tests/ || exit 1
           test -f pyproject.toml || exit 1
           test -f src/flower_basic/__init__.py || exit 1
-          echo "✅ Project structure is valid"
+          echo "âœ… Project structure is valid"
 
       - name: Run automated code quality check
         run: |
@@ -179,11 +179,12 @@ jobs:
           PASSED=$(grep -c "PASSED" test_results.txt || echo "0")
           FAILED=$(grep -c "FAILED" test_results.txt || echo "0")
 
-          echo "✅ Tests passed: $PASSED"
-          echo "❌ Tests failed: $FAILED"
+          echo "âœ… Tests passed: $PASSED"
+          echo "âŒ Tests failed: $FAILED"
 
           if [ "$FAILED" -gt "0" ]; then
             echo "::warning::Some tests are failing"
           else
-            echo "🎉 All tests are passing!"
+            echo "ðŸŽ‰ All tests are passing!"
           fi
+

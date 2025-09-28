@@ -1,4 +1,4 @@
-"""Tests for MQTT components (client, broker_fog)."""
+﻿"""Tests for MQTT components (client, broker_fog)."""
 
 import json
 import sys
@@ -186,7 +186,7 @@ class TestClientMQTT:
         }
 
     @patch("flower_basic.client.mqtt.Client")
-    @patch("flower_basic.client.load_ecg5000_openml")
+    @patch("flower_basic.client.load_wesad_dataset")
     def test_client_initialization(self, mock_load_data, mock_mqtt_class):
         """Test client initialization."""
         # Mock data loading
@@ -213,7 +213,7 @@ class TestClientMQTT:
         assert hasattr(client, "train_loader")
 
     @patch("flower_basic.client.mqtt.Client")
-    @patch("flower_basic.client.load_ecg5000_openml")
+    @patch("flower_basic.client.load_wesad_dataset")
     def test_global_model_reception(self, mock_load_data, mock_mqtt_class):
         """Test reception and processing of global model updates."""
         # Setup mocks
@@ -243,7 +243,7 @@ class TestClientMQTT:
         assert client._got_global
 
     @patch("flower_basic.client.mqtt.Client")
-    @patch("flower_basic.client.load_ecg5000_openml")
+    @patch("flower_basic.client.load_wesad_dataset")
     def test_training_and_publishing(self, mock_load_data, mock_mqtt_class):
         """Test local training and weight publishing."""
         # Setup mocks
@@ -288,7 +288,7 @@ class TestClientMQTT:
         from flower_basic.client import FLClientMQTT
 
         with patch("flower_basic.client.mqtt.Client"), patch(
-            "flower_basic.client.load_ecg5000_openml"
+            "flower_basic.client.load_wesad_dataset"
         ) as mock_load:
             mock_load.return_value = (
                 np.random.randn(100, 140),

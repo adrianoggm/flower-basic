@@ -15,6 +15,32 @@
 [![Data Leakage](https://img.shields.io/badge/Data%20Leakage-0%25%20Detected-brightgreen)](https://img.shields.io/badge/Data%20Leakage-0%25%20Detected-brightgreen)
 [![Tests](https://img.shields.io/badge/Tests-17%2F17%20passing-brightgreen)](https://img.shields.io/badge/Tests-17%2F17%20passing-brightgreen)
 
+**Latest Baseline Metrics (subject-based splits)**
+
+| Dataset | Model | Accuracy | Macro F1 | Train Subjects | Test Subjects |
+|---------|-------|----------|----------|----------------|---------------|
+| WESAD (physiological) | Logistic Regression | 0.930 | 0.921 | 10 | 5 |
+| WESAD (physiological) | Random Forest | 0.962 | 0.959 | 10 | 5 |
+| SWELL (computer interaction) | Logistic Regression | 0.953 | 0.948 | 20 | 5 |
+| SWELL (computer interaction) | Random Forest | 0.992 | 0.991 | 20 | 5 |
+| Combined (multimodal) | Logistic Regression | 0.908 | 0.906 | 24 train / 6 val | 10 |
+| Combined (multimodal) | Random Forest | 0.975 | 0.975 | 24 train / 6 val | 10 |
+
+The combined evaluation uses subject-disjoint train/validation/test splits; the train column shows subjects in the training fold (validation adds 6 more). Detailed metrics live in `multi_dataset_demo_report.json` and `multimodal_baseline_results.json`.
+
+**Subject-Based 5-Fold Cross-Validation**
+
+| Dataset | Model | Accuracy (mean +/- std) | Macro F1 (mean +/- std) |
+|---------|-------|--------------------------|--------------------------|
+| WESAD (physiological) | Logistic Regression | 0.865 +/- 0.079 | 0.854 +/- 0.087 |
+| WESAD (physiological) | Random Forest | 0.768 +/- 0.083 | 0.738 +/- 0.081 |
+| SWELL (computer interaction) | Logistic Regression | 0.951 +/- 0.009 | 0.946 +/- 0.009 |
+| SWELL (computer interaction) | Random Forest | 0.989 +/- 0.006 | 0.987 +/- 0.008 |
+| Combined (multimodal) | Logistic Regression | 0.931 +/- 0.026 | 0.928 +/- 0.029 |
+| Combined (multimodal) | Random Forest | 0.945 +/- 0.033 | 0.941 +/- 0.037 |
+
+Cross-validation artifacts: subject_cv_results/subject_cv_summary.csv and subject_cv_results/subject_cv_summary.json.
+
 **Modern Python Federated Learning Framework** following current PEP standards with comprehensive type hints, automated testing, and production-ready architecture.
 
 This repository implements a **federated learning with fog computing** prototype using [Flower](https://flower.ai) and MQTT. It demonstrates a hierarchical aggregation architecture using advanced ML models trained on **WESAD** (physiological stress detection) and **SWELL** (multimodal stress detection) datasets.

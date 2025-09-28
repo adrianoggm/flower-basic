@@ -31,8 +31,8 @@ import torch
 from tabulate import tabulate
 
 from .baseline_model import BaselineTrainer
-from .model import ECGModel
 from .datasets import load_wesad_dataset, partition_wesad_by_subjects
+from .model import ECGModel
 from .utils import (
     detect_data_leakage,
     statistical_significance_test,
@@ -711,13 +711,17 @@ class ModelComparator:
         print("Loading WESAD dataset with cross-validation...")
         # For now, we'll use a simple approach - load the data once and create CV splits
         from sklearn.model_selection import StratifiedKFold
-        
-        X_full, _, y_full, _ = load_wesad_dataset(test_size=0.1, random_state=random_state)
-        
+
+        X_full, _, y_full, _ = load_wesad_dataset(
+            test_size=0.1, random_state=random_state
+        )
+
         # Create cross-validation splits
-        cv = StratifiedKFold(n_splits=n_cv_folds, shuffle=True, random_state=random_state)
+        cv = StratifiedKFold(
+            n_splits=n_cv_folds, shuffle=True, random_state=random_state
+        )
         cv_splits = []
-        
+
         for train_idx, test_idx in cv.split(X_full, y_full):
             X_train, X_test = X_full[train_idx], X_full[test_idx]
             y_train, y_test = y_full[train_idx], y_full[test_idx]
@@ -756,10 +760,10 @@ class ModelComparator:
         )
 
         print(
-            f"Centralized accuracy: {stat_test['mean_a']:.4f} ± {np.std(centralized_results):.4f}"
+            f"Centralized accuracy: {stat_test['mean_a']:.4f} Â+/- {np.std(centralized_results):.4f}"
         )
         print(
-            f"Federated accuracy: {stat_test['mean_b']:.4f} ± {np.std(federated_results):.4f}"
+            f"Federated accuracy: {stat_test['mean_b']:.4f} Â+/- {np.std(federated_results):.4f}"
         )
         print(
             f"T-statistic: {stat_test['t_statistic']:.4f}, p-value: {stat_test['p_value']:.4f}"
@@ -812,29 +816,29 @@ class ModelComparator:
 
         if leakage_results["potential_leakage"]:
             recommendations.append(
-                "⚠️  DATA LEAKAGE DETECTED: Results may be artificially inflated. "
+                "â ï¸  DATA LEAKAGE DETECTED: Results may be artificially inflated. "
                 "Consider using different datasets or proper subject-based splitting."
             )
 
         if stat_test["significant"]:
             if stat_test["mean_a"] > stat_test["mean_b"]:
                 recommendations.append(
-                    "📊 CENTRALIZED SUPERIOR: Centralized learning shows statistically "
+                    "ð CENTRALIZED SUPERIOR: Centralized learning shows statistically "
                     "significant better performance."
                 )
             else:
                 recommendations.append(
-                    "📊 FEDERATED SUPERIOR: Federated learning shows statistically "
+                    "ð FEDERATED SUPERIOR: Federated learning shows statistically "
                     "significant better performance."
                 )
         else:
             recommendations.append(
-                "📊 NO SIGNIFICANT DIFFERENCE: Performance difference is not statistically significant."
+                "ð NO SIGNIFICANT DIFFERENCE: Performance difference is not statistically significant."
             )
 
         if stat_test["cohen_d"] < 0.2:
             recommendations.append(
-                "🔍 SMALL EFFECT SIZE: The performance difference is practically negligible."
+                "ð SMALL EFFECT SIZE: The performance difference is practically negligible."
             )
 
         return recommendations
@@ -880,7 +884,7 @@ class ModelComparator:
         with open(robust_file, "w") as f:
             json.dump(clean_results, f, indent=2)
 
-        print(f"\n✅ Robust results saved to: {robust_file}")
+        print(f"\nâ Robust results saved to: {robust_file}")
 
 
 def main():

@@ -134,3 +134,8 @@ flower_client_*.log
 data/
 data/**
 
+# Generated reports
+multi_dataset_demo_report.json
+WESAD_BASELINE_RESULTS.md
+SWELL_BASELINE_RESULTS.md
+multimodal_baseline_results.json

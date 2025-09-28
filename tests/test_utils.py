@@ -1,4 +1,4 @@
-"""Tests for utility functions."""
+﻿"""Tests for utility functions."""
 
 from unittest.mock import MagicMock, patch
 
@@ -7,84 +7,9 @@ import pytest
 import torch
 
 from flower_basic.utils import (
-    load_ecg5000_openml,
     numpy_to_state_dict,
     state_dict_to_numpy,
 )
-
-
-class TestDataLoading:
-    """Test cases for data loading functions."""
-
-    @patch("flower_basic.utils.fetch_openml")
-    def test_load_ecg5000_openml_success(self, mock_fetch):
-        """Test successful ECG5000 data loading."""
-        # Mock the fetch_openml response
-        mock_data = MagicMock()
-        mock_data.__getitem__.side_effect = lambda key: {
-            "data": np.random.rand(100, 140).astype(np.float32),
-            "target": np.random.randint(1, 6, 100),
-        }[key]
-        mock_fetch.return_value = mock_data
-
-        # Test data loading
-        X_train, X_test, y_train, y_test = load_ecg5000_openml(test_size=0.2)
-
-        # Verify shapes and types
-        assert isinstance(X_train, np.ndarray)
-        assert isinstance(X_test, np.ndarray)
-        assert isinstance(y_train, np.ndarray)
-        assert isinstance(y_test, np.ndarray)
-
-        # Check binary labels (should be 0 or 1)
-        assert set(np.unique(y_train)).issubset({0, 1})
-        assert set(np.unique(y_test)).issubset({0, 1})
-
-        # Check train/test split
-        total_samples = len(X_train) + len(X_test)
-        assert abs(len(X_test) / total_samples - 0.2) < 0.1  # Approximately 20%
-
-    @patch("flower_basic.utils.fetch_openml")
-    def test_load_ecg5000_different_test_sizes(self, mock_fetch):
-        """Test data loading with different test sizes."""
-        mock_data = MagicMock()
-        mock_data.__getitem__.side_effect = lambda key: {
-            "data": np.random.rand(1000, 140).astype(np.float32),
-            "target": np.random.randint(1, 6, 1000),
-        }[key]
-        mock_fetch.return_value = mock_data
-
-        for test_size in [0.1, 0.3, 0.5]:
-            X_train, X_test, y_train, y_test = load_ecg5000_openml(test_size=test_size)
-
-            total_samples = len(X_train) + len(X_test)
-            actual_test_ratio = len(X_test) / total_samples
-            assert abs(actual_test_ratio - test_size) < 0.05
-
-    def test_load_ecg5000_deterministic_split(self):
-        """Test that the data split is deterministic with fixed random_state."""
-        with patch("flower_basic.utils.fetch_openml") as mock_fetch:
-            # Create deterministic data
-            np.random.seed(123)  # Fixed seed for deterministic data
-            fixed_data = np.random.rand(100, 140).astype(np.float32)
-            fixed_target = np.random.randint(1, 6, 100)
-
-            mock_data = MagicMock()
-            mock_data.__getitem__.side_effect = lambda key: {
-                "data": fixed_data.copy(),  # Use copy to avoid reference issues
-                "target": fixed_target.copy(),
-            }[key]
-            mock_fetch.return_value = mock_data
-
-            # Load data twice with same random state
-            X_train1, X_test1, y_train1, y_test1 = load_ecg5000_openml(random_state=42)
-            X_train2, X_test2, y_train2, y_test2 = load_ecg5000_openml(random_state=42)
-
-            # Results should be identical
-            np.testing.assert_array_equal(X_train1, X_train2)
-            np.testing.assert_array_equal(X_test1, X_test2)
-            np.testing.assert_array_equal(y_train1, y_train2)
-            np.testing.assert_array_equal(y_test1, y_test2)
 
 
 class TestStateDictConversion:

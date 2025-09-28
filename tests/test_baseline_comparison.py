@@ -1,4 +1,4 @@
-"""Tests for baseline and comparison functionality."""
+﻿"""Tests for baseline and comparison functionality."""
 
 import json
 import os
@@ -302,7 +302,7 @@ class TestModelComparator:
         assert comparison["differences"]["time_ratio"] == pytest.approx(100.0 / 120.0)
         assert comparison["summary"]["better_approach"] == "centralized"
 
-    @patch("flower_basic.utils.load_ecg5000_openml")
+    @patch("flower_basic.utils.load_ecg5000_subject_based")
     @patch("flower_basic.compare_models.BaselineTrainer")
     @patch("flower_basic.compare_models.FederatedSimulator")
     def test_run_comparison_integration(

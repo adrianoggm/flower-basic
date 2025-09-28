@@ -1,150 +1,68 @@
-# 🚀 Multi-Dataset Federated Learning Demo - Executive Summary
+﻿# 🚀 Multi-Dataset Federated Learning Demo – Executive Summary
 
 **Fecha**: 27 Septiembre 2025  
-**Demo Ejecutado**: Federación WESAD + SWELL  
-**Estado**: ✅ Completado Exitosamente
+**Demo Ejecutado**: Federación WESAD + SWELL (sujeto a particiones por participante)
 
 ---
 
-## 📊 Datasets Baseline Results
+## 📊 Resultados Baseline Actualizados (splits por sujeto)
 
-### 🏥 WESAD (Healthcare/Lab Environment)
+### 🩺 WESAD – Stress fisiológico controlado
 - **Modalidad**: Señales fisiológicas (BVP, EDA, ACC, TEMP)
 - **Participantes**: 15 sujetos reales (S2-S17)
-- **Features**: 22 características fisiológicas
-- **Best Model**: Random Forest
-- **🎯 Baseline Accuracy**: **82.8%**
+- **División**: 10 sujetos para entrenamiento (572 ventanas) / 5 sujetos para test (287 ventanas)
+- **Características**: 30 estadísticas por ventana (60 s, 50% solape)
+- **Modelos**:
+  - Logistic Regression → **93.0%** accuracy, **0.921** macro-F1
+  - Random Forest → **96.2%** accuracy, **0.959** macro-F1
+- 5-fold CV (por sujeto): LR 86.5% +/- 7.9% acc / 85.4% +/- 8.7% macro-F1; RF 76.8% +/- 8.3% acc / 73.8% +/- 8.1% macro-F1.
+- **Insight**: El protocolo TSST genera diferencias fisiológicas claras incluso con menos sujetos en train (manteniendo la separación por participante).
 
-### 🏢 SWELL (Office/Workplace Environment)  
-- **Modalidad**: Computer interaction behavioral data
-- **Participantes**: 25 participantes reales (PP1-PP25)
-- **Features**: 16 computer interaction features
-- **Best Model**: SVM
-- **🎯 Baseline Accuracy**: **67.4%** (Verificado: 67.2%)
-
----
-
-## 🤝 Federated Learning Scenario
-
-### 🌐 Cross-Modal Federated Setup
-- **Organization A**: Healthcare facility con datos fisiológicos (WESAD)
-- **Organization B**: Office workplace con datos comportamentales (SWELL)
-- **🔒 Privacy**: No sharing de raw data entre organizaciones
-- **🎯 Objetivo**: Stress detection robusto cross-domain
-
-### 📈 Performance Targets
-- **Average Baseline**: 75.1%
-- **🎯 FL Conservative Target**: 67.6% (90% del promedio)
-- **🚀 FL Optimistic Target**: 78.9% (105% del promedio)
+### 💻 SWELL – Stress en escenarios de oficina
+- **Modalidad**: Computer interaction (mouse/teclado/app switching)
+- **Participantes**: 25 (20 sujetos para train / 5 para test tras split por participante)
+- **Características**: 17 métricas limpias + canónicas (incluye SCL↔EDA cuando está presente)
+- **Modelos**:
+  - Logistic Regression → **95.3%** accuracy, **0.948** macro-F1
+  - Random Forest → **99.2%** accuracy, **0.991** macro-F1
+- 5-fold CV (por sujeto): LR 95.1% +/- 0.9% acc / 94.6% +/- 0.9% macro-F1; RF 98.9% +/- 0.6% acc / 98.7% +/- 0.8% macro-F1.
+- **Insight**: Las estadísticas de interacción, combinadas con imputaciones y reducción de varianza, distinguen con claridad sesiones con presión/interruptions vs baseline.
 
 ---
 
-## 🎯 Key Insights
+## 🤝 Escenario Federado / Multimodal
 
-### ✅ Strengths Identificadas
-1. **Complementary Modalities**: Fisiológica + Comportamental
-2. **Real Subject Data**: 40 participantes totales (15 + 25)
-3. **Cross-Domain Robustness**: Lab + Workplace environments
-4. **Privacy-Preserving**: FL ideal para datos médicos/comportamentales sensibles
-
-### 📊 Performance Analysis
-- **WESAD Superior**: 82.8% vs 67.4% (15.4 puntos de diferencia)
-- **Fisiología > Comportamiento**: Para stress detection
-- **Realistic Targets**: 67.6%-78.9% para FL cross-modal
-
-### 🔍 Technical Validation
-- ✅ Subject-based splitting (no data leakage)
-- ✅ Baselines verificados experimentalmente
-- ✅ Realistic FL performance expectations
+- **Loaders**: `load_real_multimodal_dataset()` aplica el mapa canónico (EDA) y mantiene bloques específicos por modalidad.
+- **Particiones por sujeto**: 24 sujetos en train (2 453 ventanas), 6 sujetos en validación (619), 10 sujetos en test (926) – sin fuga de datos.
+- **Resultados (test)**:
+  - Logistic Regression → **90.8%** accuracy, **0.906** macro-F1
+  - Random Forest → **97.5%** accuracy, **0.975** macro-F1
+- 5-fold CV (por sujeto): LR 93.1% +/- 2.6% acc / 92.8% +/- 2.9% macro-F1; RF 94.5% +/- 3.3% acc / 94.1% +/- 3.7% macro-F1.
+- **Métricas de validación** (monitorización previa al retrain): LR 88.2% / RF 94.5% accuracy.
+- **Indicador de dataset**: Se mantiene la columna `dataset_is_wesad` para diferenciar procedencia durante el entrenamiento global.
 
 ---
 
-## 🚀 Next Steps for FL Implementation
-
-### 1. 🌸 Flower FL Setup
-- [ ] Implement WESAD client (physiological)
-- [ ] Implement SWELL client (behavioral)
-- [ ] Central server with aggregation strategy
-
-### 2. 🔧 Technical Challenges
-- [ ] Feature alignment across modalities
-- [ ] Model architecture for cross-modal learning
-- [ ] Aggregation weights (WESAD vs SWELL contribution)
-
-### 3. 🎯 Success Metrics
-- [ ] Achieve >67.6% accuracy (conservative target)
-- [ ] Maintain privacy preservation
-- [ ] Demonstrate cross-modal generalization
+## 🔑 Claves Técnicas
+- **Alineación canónica**: EDA/SCL comparten las mismas columnas; se evita inflar dimensionalidad con prefijos duplicados.
+- **Imputación controlada**: Se rellenan NaN con medias por característica y se eliminan features de varianza cero en SWELL.
+- **Splits por sujeto**: Todos los scripts (`run_multi_dataset_demo.py`, `evaluate_multimodal_baseline.py`, `demo_multidataset_fl.py`) usan `_split_by_subject`, preservando privacidad y evitando leakage.
+- **Metadatos ricos**: Los loaders devuelven `n_subjects`, `n_samples`, `feature_names` y escaladores para reproducibilidad (véanse `multi_dataset_demo_report.json` y `multimodal_baseline_results.json`).
 
 ---
 
-## 📁 Generated Artifacts
-
-- ✅ `WESAD_BASELINE_RESULTS.md`: Comprehensive WESAD evaluation
-- ✅ `SWELL_BASELINE_RESULTS.md`: Comprehensive SWELL evaluation  
-- ✅ `multi_dataset_demo_report.json`: Technical specs and targets
-- ✅ `run_multi_dataset_demo.py`: Reproducible demo script
-
----
-
-## 🗑️ Archivos generados potencialmente no útiles
-
-A continuación se listan archivos que se han generado durante el proceso y que pueden ser redundantes, temporales o no necesarios para el informe final:
-
-- `multi_dataset_demo_report.json`  *(reporte técnico intermedio, puede ser útil solo para trazabilidad interna)*
-- `run_multi_dataset_demo.py`  *(script de demo, solo necesario si quieres volver a ejecutar la simulación)*
-- `swell_real_vs_synthetic.py`  *(diagnóstico de sujetos sintéticos, útil solo para auditoría)*
-- `swell_pure_real.py`  *(baseline real SWELL, mantener solo si quieres reproducir baseline puro)*
-- `debug_swell_real.py`  *(script de depuración, probablemente prescindible)*
-- `SWELL_BASELINE_RESULTS.md`  *(mantener solo la versión corregida y limpia)*
-- `WESAD_BASELINE_RESULTS.md`  *(mantener solo la versión final y limpia)*
-
-> **Recomendación:** Revisa estos archivos y elimina los que no sean necesarios para tu entrega o documentación final.
+## ✅ Próximos Pasos Recomendados
+1. **Explorar modalidad fisiológica completa de SWELL** para incorporar HR/HRV y reforzar la porción común con WESAD.
+2. **Evaluar modelos multimodales jerárquicos** (ramas separadas por dataset + fusión tardía) para aprovechar los indicadores específicos.
+3. **Añadir métricas por origen** en la evaluación combinada (p. ej., rendimiento del modelo global sobre ventanas SWELL vs WESAD por separado).
+4. **Documentar pipeline reproducible** (Makefile/README) con los nuevos parámetros (`test_size=5/15` para WESAD) y scripts actualizados.
 
 ---
 
-## 🔬 Comparativa de Medidas y Features Compartidas
-
-### ¿Qué comparten WESAD y SWELL?
-- **Ambos miden señales fisiológicas relacionadas con el corazón:**
-  - **WESAD:** BVP, ECG, HR (derivable), EDA, TEMP, ACC
-  - **SWELL:** HRV features (derivadas de ECG/IBI), HR, SDRR, RMSSD, etc.
-- **Ambos tienen etiquetas de estrés/no estrés.**
-- **Ambos pueden tener HR (Heart Rate) como feature comparable.**
-- **Ambos pueden tener acelerometría (ACC) si se extraen features equivalentes.**
-
-### ¿Qué NO comparten?
-- **SWELL** no tiene señales de EDA, BVP, TEMP, ni cuestionarios subjetivos.
-- **WESAD** no tiene HRV features precomputadas (pero se pueden calcular a partir de ECG/BVP).
-- **No comparten features de interacción con ordenador.**
-
-### Nota sobre la fusión multimodal
-- **No existen columnas/medidas con el mismo nombre ni el mismo tipo de señal directamente entre ambos datasets.**
-- El baseline multimodal presentado simula la fusión usando las primeras N columnas de cada dataset, pero no hay correspondencia real de medición.
-- Para una fusión real, solo HR (Heart Rate) y potencialmente ACC (acelerometría) serían comparables si se procesan igual.
-
----
-
-## 🤖 Resultados Baseline Multimodal (WESAD + SWELL)
-
-- **Random Forest (multimodal):** Test Accuracy = 0.627
-- **SVM (multimodal):** Test Accuracy = 0.539
-
-> *Nota: El modelo multimodal combina ambos datasets usando features simuladas como comunes. El rendimiento refleja la dificultad de mezclar modalidades y sujetos distintos sin features realmente compartidas.*
-
----
-
-## 🏆 Demo Conclusion
-
-**🎯 Status**: Ready for Flower FL implementation with realistic baselines
-
-**📊 Key Numbers**:
-- WESAD: 82.8% (physiological)
-- SWELL: 67.4% (behavioral)
-- FL Target: 67.6% - 78.9%
-
-**🚀 Impact**: Multi-modal stress detection con privacy preservation across healthcare y workplace domains.
-
----
-
-**🎉 Multi-Dataset Demo Successfully Completed!**
+ℹ️ Para valores exactos, consulte:
+- `multi_dataset_demo_report.json`
+- `WESAD_BASELINE_RESULTS.md`
+- `SWELL_BASELINE_RESULTS.md`
+- `multimodal_baseline_results.json`
+- `subject_cv_results/subject_cv_summary.csv`
+- `subject_cv_results/subject_cv_summary.json`
