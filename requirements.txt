@@ -1,6 +1,6 @@
 # Core dependencies for Federated Learning with Fog Computing
 torch>=2.0.0,<3.0.0          # Deep learning framework
-torchvision>=0.15.0,<0.18.0  # Computer vision extensions for PyTorch
+torchvision>=0.15.0,<0.24.0  # Computer vision extensions for PyTorch
 numpy>=1.21.0,<2.0.0         # Fundamental package for array computing - compatible with PyTorch
 scikit-learn>=1.0.0,<2.0.0   # Machine learning library
 scipy>=1.7.0,<2.0.0          # Scientific computing library
